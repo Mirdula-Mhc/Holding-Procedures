@@ -155,7 +155,7 @@ public class A320HSI : MonoBehaviour
     [HideInInspector][SerializeField] private Canvas canvas;
     [HideInInspector][SerializeField] private RectTransform hsiRoot;
     [HideInInspector][SerializeField] private RectTransform screenArea;
-    private float scale; // pixels per SVG unit - hsiSize.x / 300
+    [HideInInspector][SerializeField] private float scale; // pixels per SVG unit - hsiSize.x / 300
 
     // Rotating compass card
     [HideInInspector][SerializeField] private RectTransform rosePivot;
