@@ -67,6 +67,16 @@ public class HoldingMapIconFollower : MonoBehaviour
         PlaceIconAtT(trackedAircraft.NormalizedT);
     }
 
+    private void LateUpdate()
+    {
+        if (trackedAircraft == null || aircraftIcon == null || pathWaypoints == null || pathWaypoints.Length < 2)
+            return;
+
+        if (totalPathLength <= 0f)
+            CalculatePathDistances();
+
+        PlaceIconAtT(trackedAircraft.NormalizedT);
+    }
     private void PlaceIconAtT(float t)
     {
         float targetDistance = Mathf.Clamp01(t) * totalPathLength;
