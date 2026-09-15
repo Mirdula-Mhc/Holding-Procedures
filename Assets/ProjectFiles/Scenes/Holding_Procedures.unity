@@ -10641,7 +10641,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1572852892
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10691,7 +10691,7 @@ MonoBehaviour:
     - Position:
         x: 15.656442
         y: 0
-        z: 12.112802
+        z: 12
       TangentIn:
         x: 0
         y: 0
@@ -10709,7 +10709,7 @@ MonoBehaviour:
     - Position:
         x: 28.028734
         y: 0
-        z: 21.262707
+        z: 21
       TangentIn:
         x: 0
         y: 0
@@ -10727,7 +10727,7 @@ MonoBehaviour:
     - Position:
         x: 41.688736
         y: 0
-        z: 23.582706
+        z: 23
       TangentIn:
         x: 0
         y: 0
@@ -10745,7 +10745,7 @@ MonoBehaviour:
     - Position:
         x: 37.178734
         y: 0
-        z: 11.272708
+        z: 12
       TangentIn:
         x: 0
         y: 0
@@ -10763,7 +10763,7 @@ MonoBehaviour:
     - Position:
         x: 9.53561
         y: 0
-        z: 11.404073
+        z: 12
       TangentIn:
         x: 0
         y: 0
@@ -10781,7 +10781,7 @@ MonoBehaviour:
     - Position:
         x: -0.32126617
         y: 0
-        z: 23.062706
+        z: 23
       TangentIn:
         x: 0
         y: 0
@@ -10799,7 +10799,7 @@ MonoBehaviour:
     - Position:
         x: 9.664457
         y: 0
-        z: 35.37196
+        z: 36
       TangentIn:
         x: 0
         y: 0
@@ -10817,7 +10817,7 @@ MonoBehaviour:
     - Position:
         x: 65.0741
         y: 0
-        z: 36.016224
+        z: 36
       TangentIn:
         x: 0
         y: 0
@@ -10835,7 +10835,7 @@ MonoBehaviour:
     - Position:
         x: 76.608734
         y: 0
-        z: 24.422707
+        z: 24
       TangentIn:
         x: 0
         y: 0
@@ -10849,11 +10849,11 @@ MonoBehaviour:
           x: 0
           y: 0.99999475
           z: 0
-          w: 0.0032527116
+          w: 0.003252709
     - Position:
         x: 65.46068
         y: 0
-        z: 12.177203
+        z: 12
       TangentIn:
         x: 0
         y: 0
@@ -10871,7 +10871,7 @@ MonoBehaviour:
     - Position:
         x: 15.656442
         y: 0
-        z: 12.112802
+        z: 12
       TangentIn:
         x: 0
         y: 0
