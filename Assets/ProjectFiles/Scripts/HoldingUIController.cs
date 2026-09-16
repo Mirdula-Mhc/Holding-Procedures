@@ -1,0 +1,331 @@
+// HoldingUIController.cs
+//
+// Mirrors UIController.cs: subscribes to HoldingScenarioManager's events, shows/hides panels
+// based on the current step's stepType, and is the ONLY thing that touches nextButton /
+// previousButton .interactable (via UnlockNavigation - the single gatekeeper, same role as
+// ATC's UIController.UnlockNavigation()). There is exactly one Next button and one Previous
+// button for the whole flow - no per-step, no per-sector buttons.
+//
+// This script also owns wiring the current step's data into the existing simulation components
+// (SplineAircraftMover, HoldingHsiFeeder, HoldingMapIconFollower, HoldingMapView,
+// HoldingTimerPopup) - those components stay exactly as already built; this is the layer that
+// tells them which scenario's values to use, same relationship UIController has to
+// AnimationController/VideoController in ATC.
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
+
+public class HoldingUIController : MonoBehaviour
+{
+    [Header("References")]
+    [SerializeField] private HoldingScenarioManager scenarioManager;
+
+    [Header("Familiarization Panel")]
+    [SerializeField] private GameObject familiarizationPanel;
+    [SerializeField] private TextMeshProUGUI familiarizationLabelText;
+
+    [Tooltip("Every highlightable element on the familiarization page, keyed by the id used in HoldingStepData.highlightElementId. Only the matching entry is shown/highlighted per step.")]
+    [SerializeField] private List<HighlightElement> highlightElements;
+
+    [Header("Sector Select Panel")]
+    [SerializeField] private GameObject sectorSelectPanel;
+    [Tooltip("All three sector buttons - always visible together. Only the one matching the current step's correctSector is made interactable.")]
+    [SerializeField] private Button directButton;
+    [SerializeField] private Button offsetButton;
+    [SerializeField] private Button parallelButton;
+
+    [Header("Simulation Panel")]
+    [SerializeField] private GameObject simulationPanel;
+    [SerializeField] private SplineAircraftMover aircraftMover;
+    [SerializeField] private HoldingHsiFeeder hsiFeeder;
+    [SerializeField] private HoldingMapIconFollower mapIconFollower;
+    [SerializeField] private HoldingMapView mapView;
+    [SerializeField] private HoldingTimerPopup timerPopup;
+
+    [Header("Recap Panel")]
+    [SerializeField] private GameObject recapPanel;
+    [SerializeField] private TextMeshProUGUI recapText;
+
+    [Header("Navigation")]
+    [SerializeField] private Button nextButton;
+    [SerializeField] private Button previousButton;
+
+    [System.Serializable]
+    public struct HighlightElement
+    {
+        public string id;
+        public GameObject element;
+    }
+
+    // ------------------------------------------------------------------
+    // Simulation runtime state (per current step)
+    // ------------------------------------------------------------------
+    private HoldingStepData activeSimStep;
+    private int nextCheckpointIndex;
+
+    private void Awake()
+    {
+        nextButton.onClick.AddListener(scenarioManager.GoNext);
+        previousButton.onClick.AddListener(scenarioManager.GoPrevious);
+
+        directButton.onClick.AddListener(() => scenarioManager.SelectSector(HoldingEntryType.Direct));
+        offsetButton.onClick.AddListener(() => scenarioManager.SelectSector(HoldingEntryType.Offset));
+        parallelButton.onClick.AddListener(() => scenarioManager.SelectSector(HoldingEntryType.Parallel));
+    }
+
+    private void OnEnable()
+    {
+        scenarioManager.OnStepLoaded += HandleStepLoaded;
+        scenarioManager.OnVoiceoverComplete += HandleVoiceoverComplete;
+        scenarioManager.OnSectorSelected += HandleSectorSelected;
+        scenarioManager.OnCheckpointReached += HandleCheckpointReached;
+        scenarioManager.OnSimulationStepComplete += HandleSimulationStepComplete;
+        scenarioManager.OnAllStepsComplete += HandleAllStepsComplete;
+    }
+
+    private void OnDisable()
+    {
+        scenarioManager.OnStepLoaded -= HandleStepLoaded;
+        scenarioManager.OnVoiceoverComplete -= HandleVoiceoverComplete;
+        scenarioManager.OnSectorSelected -= HandleSectorSelected;
+        scenarioManager.OnCheckpointReached -= HandleCheckpointReached;
+        scenarioManager.OnSimulationStepComplete -= HandleSimulationStepComplete;
+        scenarioManager.OnAllStepsComplete -= HandleAllStepsComplete;
+    }
+
+    // ------------------------------------------------------------------
+    // STEP LOADED
+    // ------------------------------------------------------------------
+
+    private void HandleStepLoaded(HoldingStepData step, int index)
+    {
+        StopAllCoroutines();
+        HideAllPanels();
+
+        switch (step.stepType)
+        {
+            case HoldingStepType.Familiarization:
+                ShowFamiliarizationStep(step);
+                break;
+
+            case HoldingStepType.SectorSelect:
+                ShowSectorSelectStep(step);
+                break;
+
+            case HoldingStepType.Simulation:
+                ShowSimulationStep(step);
+                break;
+
+            case HoldingStepType.Recap:
+                ShowRecapStep(step);
+                break;
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // FAMILIARIZATION
+    // ------------------------------------------------------------------
+
+    private void ShowFamiliarizationStep(HoldingStepData step)
+    {
+        familiarizationPanel.SetActive(true);
+        familiarizationLabelText.text = step.familiarizationLabel;
+
+        foreach (HighlightElement entry in highlightElements)
+        {
+            if (entry.element != null)
+                entry.element.SetActive(entry.id == step.highlightElementId);
+        }
+
+        // Gated on voiceover finishing - HandleVoiceoverComplete calls UnlockNavigation().
+        LockNavigation();
+    }
+
+    // ------------------------------------------------------------------
+    // SECTOR SELECT
+    // ------------------------------------------------------------------
+
+    private void ShowSectorSelectStep(HoldingStepData step)
+    {
+        sectorSelectPanel.SetActive(true);
+
+        // All three buttons stay visible; only the correct one is interactable.
+        directButton.interactable = step.correctSector == HoldingEntryType.Direct;
+        offsetButton.interactable = step.correctSector == HoldingEntryType.Offset;
+        parallelButton.interactable = step.correctSector == HoldingEntryType.Parallel;
+
+        // Selecting the sector auto-advances (see HoldingScenarioManager.SelectSector), so Next
+        // is not needed on this page - keep it locked.
+        LockNavigation();
+    }
+
+    private void HandleSectorSelected(HoldingStepData step, HoldingEntryType sector)
+    {
+        // SelectSector() already calls GoNext() itself - nothing to do here beyond
+        // any visual acknowledgement you want to add later (e.g. a brief highlight flash).
+    }
+
+    // ------------------------------------------------------------------
+    // SIMULATION
+    // ------------------------------------------------------------------
+
+    private void ShowSimulationStep(HoldingStepData step)
+    {
+        simulationPanel.SetActive(true);
+        LockNavigation();
+
+        activeSimStep = step;
+        nextCheckpointIndex = 0;
+
+        if (aircraftMover != null)
+        {
+            aircraftMover.SetSpline(step.worldSpline);
+            aircraftMover.Play();
+        }
+
+        if (mapIconFollower != null)
+            mapIconFollower.SetUiSpline(step.uiSpline);
+
+        if (hsiFeeder != null)
+        {
+            hsiFeeder.approachCourse = step.approachCourse;
+            hsiFeeder.holdingInboundCourse = step.holdingInboundCourse;
+            hsiFeeder.ResetFixCrossing();
+        }
+
+        if (mapView != null)
+        {
+            mapView.ClearEntryPath();
+            if (step.showDottedEntryPath)
+                mapView.ShowEntryPath(step.worldSpline);
+        }
+
+        StartCoroutine(WatchSimulationCheckpoints());
+    }
+
+    private IEnumerator WatchSimulationCheckpoints()
+    {
+        while (activeSimStep != null)
+        {
+            if (aircraftMover == null)
+                yield break;
+
+            if (nextCheckpointIndex < activeSimStep.pauseAtProgressT.Length)
+            {
+                float target = activeSimStep.pauseAtProgressT[nextCheckpointIndex];
+                if (aircraftMover.NormalizedT >= target)
+                {
+                    scenarioManager.NotifyCheckpointReached(nextCheckpointIndex);
+                    yield break; // HandleCheckpointReached restarts this loop after the timer
+                }
+            }
+            else if (aircraftMover.ReachedEnd)
+            {
+                scenarioManager.NotifySimulationStepComplete();
+                yield break;
+            }
+
+            yield return null;
+        }
+    }
+
+    private void HandleCheckpointReached(int checkpointIndex)
+    {
+        if (aircraftMover != null)
+            aircraftMover.Pause();
+
+        if (timerPopup != null && activeSimStep != null)
+        {
+            timerPopup.simulatedDuration = activeSimStep.simulatedTimerDuration;
+            timerPopup.Show(OnCheckpointTimerFinished);
+        }
+        else
+        {
+            OnCheckpointTimerFinished();
+        }
+    }
+
+    private void OnCheckpointTimerFinished()
+    {
+        nextCheckpointIndex++;
+
+        if (aircraftMover != null)
+            aircraftMover.Play();
+
+        StartCoroutine(WatchSimulationCheckpoints());
+    }
+
+    private void HandleSimulationStepComplete()
+    {
+        UnlockNavigation();
+    }
+
+    // ------------------------------------------------------------------
+    // RECAP
+    // ------------------------------------------------------------------
+
+    private void ShowRecapStep(HoldingStepData step)
+    {
+        recapPanel.SetActive(true);
+        recapText.text = step.recapText;
+        UnlockNavigation();
+    }
+
+    // ------------------------------------------------------------------
+    // VOICEOVER
+    // ------------------------------------------------------------------
+
+    private void HandleVoiceoverComplete()
+    {
+        UnlockNavigation();
+    }
+
+    // ------------------------------------------------------------------
+    // FINISH
+    // ------------------------------------------------------------------
+
+    private void HandleAllStepsComplete()
+    {
+        Debug.Log("Holding Procedures training complete.");
+    }
+
+    // ------------------------------------------------------------------
+    // HELPERS
+    // ------------------------------------------------------------------
+
+    private void LockNavigation()
+    {
+        nextButton.interactable = false;
+        previousButton.interactable = false;
+    }
+
+    /// <summary>Single gatekeeper for turning Next/Previous back on - mirrors ATC's UIController.UnlockNavigation(). Always call this instead of setting the buttons directly.</summary>
+    private void UnlockNavigation()
+    {
+        HoldingStepData current = scenarioManager.CurrentStep;
+        if (current == null)
+            return;
+
+        bool requiresCompletion =
+            current.stepType == HoldingStepType.SectorSelect ||
+            current.stepType == HoldingStepType.Simulation;
+
+        bool allowNext = !requiresCompletion || scenarioManager.IsCompleted(scenarioManager.CurrentIndex);
+
+        nextButton.interactable = allowNext;
+        previousButton.interactable = scenarioManager.CurrentIndex > 0;
+    }
+
+    private void HideAllPanels()
+    {
+        familiarizationPanel.SetActive(false);
+        sectorSelectPanel.SetActive(false);
+        simulationPanel.SetActive(false);
+        recapPanel.SetActive(false);
+
+        activeSimStep = null;
+    }
+}

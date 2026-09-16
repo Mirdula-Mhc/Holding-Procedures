@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7e439994ed88f804590d9856a3b528a0, type: 3}
+  m_Name: '[4] Offset_Stimulate'
+  m_EditorClassIdentifier: Assembly-CSharp::HoldingStepData
+  stepId: 
+  stepType: 2
+  highlightElementId: 
+  familiarizationLabel: 
+  correctSector: 1
+  worldSpline: {fileID: 7018789086066834461, guid: 7494f05f416577545a7f7a605907d5f1, type: 3}
+  uiSpline: {fileID: 5629475408913673018, guid: 41cc3acbd8b30b24d81735eb5b0db3fc, type: 3}
+  showDottedEntryPath: 0
+  approachCourse: 60
+  holdingInboundCourse: 270
+  pauseAtProgressT:
+  - 0.43
+  simulatedTimerDuration: 4
+  recapText: 
+  voiceover: {fileID: 0}
