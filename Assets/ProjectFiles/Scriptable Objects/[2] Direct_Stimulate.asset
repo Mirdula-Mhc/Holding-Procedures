@@ -24,6 +24,6 @@ MonoBehaviour:
   holdingInboundCourse: 270
   pauseAtProgressT:
   - 0.43
-  simulatedTimerDuration: 2
+  simulatedTimerDuration: 6
   recapText: 
   voiceover: {fileID: 0}

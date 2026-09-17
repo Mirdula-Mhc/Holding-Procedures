@@ -14,9 +14,10 @@
 
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.UI;
 using TMPro;
+using UnityEngine;
+using UnityEngine.Splines;
+using UnityEngine.UI;
 
 public class HoldingUIController : MonoBehaviour
 {
@@ -34,8 +35,11 @@ public class HoldingUIController : MonoBehaviour
     [SerializeField] private GameObject sectorSelectPanel;
     [Tooltip("All three sector buttons - always visible together. Only the one matching the current step's correctSector is made interactable.")]
     [SerializeField] private Button directButton;
+    public Image directImg;
     [SerializeField] private Button offsetButton;
+    public Image offsetImg;
     [SerializeField] private Button parallelButton;
+    public Image parallelImg;
 
     [Header("Simulation Panel")]
     [SerializeField] private GameObject simulationPanel;
@@ -74,6 +78,13 @@ public class HoldingUIController : MonoBehaviour
         directButton.onClick.AddListener(() => scenarioManager.SelectSector(HoldingEntryType.Direct));
         offsetButton.onClick.AddListener(() => scenarioManager.SelectSector(HoldingEntryType.Offset));
         parallelButton.onClick.AddListener(() => scenarioManager.SelectSector(HoldingEntryType.Parallel));
+    }
+
+    private void Start()
+    {
+        directImg.alphaHitTestMinimumThreshold = 0.01f;
+        offsetImg.alphaHitTestMinimumThreshold = 0.01f;
+        parallelImg.alphaHitTestMinimumThreshold = 0.01f;
     }
 
     private void OnEnable()
@@ -172,6 +183,7 @@ public class HoldingUIController : MonoBehaviour
     // SIMULATION
     // ------------------------------------------------------------------
 
+    // Inside HoldingUIController.cs -> ShowSimulationStep()
     private void ShowSimulationStep(HoldingStepData step)
     {
         simulationPanel.SetActive(true);
@@ -180,14 +192,20 @@ public class HoldingUIController : MonoBehaviour
         activeSimStep = step;
         nextCheckpointIndex = 0;
 
-        if (aircraftMover != null)
+        // Resolve scene instances from the ScriptableObject prefabs:
+        SplineContainer activeWorldSpline = ResolveSceneSpline(step.worldSpline);
+        SplineContainer activeUiSpline = ResolveSceneSpline(step.uiSpline);
+
+        if (aircraftMover != null && activeWorldSpline != null)
         {
-            aircraftMover.SetSpline(step.worldSpline);
+            aircraftMover.SetSpline(activeWorldSpline);
             aircraftMover.Play();
         }
 
-        if (mapIconFollower != null)
-            mapIconFollower.SetUiSpline(step.uiSpline);
+        if (mapIconFollower != null && activeUiSpline != null)
+        {
+            mapIconFollower.SetUiSpline(activeUiSpline);
+        }
 
         if (hsiFeeder != null)
         {
@@ -199,11 +217,30 @@ public class HoldingUIController : MonoBehaviour
         if (mapView != null)
         {
             mapView.ClearEntryPath();
-            if (step.showDottedEntryPath)
-                mapView.ShowEntryPath(step.worldSpline);
+            if (step.showDottedEntryPath && activeWorldSpline != null)
+                mapView.ShowEntryPath(activeWorldSpline);
         }
 
         StartCoroutine(WatchSimulationCheckpoints());
+    }
+
+    // Helper: Finds the active scene GameObject that shares the prefab's name
+    private SplineContainer ResolveSceneSpline(SplineContainer prefabOrSceneSpline)
+    {
+        if (prefabOrSceneSpline == null) return null;
+
+        // If already a scene object, return it directly
+        if (prefabOrSceneSpline.gameObject.scene.IsValid())
+            return prefabOrSceneSpline;
+
+        // If it's a prefab asset from the Project tab, find the active instance in the Hierarchy
+        GameObject sceneObj = GameObject.Find(prefabOrSceneSpline.name);
+        if (sceneObj != null && sceneObj.TryGetComponent(out SplineContainer sceneSpline))
+        {
+            return sceneSpline;
+        }
+
+        return prefabOrSceneSpline;
     }
 
     private IEnumerator WatchSimulationCheckpoints()
@@ -262,6 +299,7 @@ public class HoldingUIController : MonoBehaviour
     {
         UnlockNavigation();
     }
+
 
     // ------------------------------------------------------------------
     // RECAP

@@ -10,7 +10,7 @@ public class HoldingMapIconFollower : MonoBehaviour
     [Tooltip("The 3D aircraft driving progress.")]
     [SerializeField] private SplineAircraftMover trackedAircraft;
 
-    [Tooltip("The duplicated UI spline sitting on your Map canvas.")]
+    [Tooltip("The 3D Spline prefab aligned with the map.")]
     [SerializeField] private SplineContainer uiSpline;
 
     [Header("Target Icon")]
@@ -18,7 +18,7 @@ public class HoldingMapIconFollower : MonoBehaviour
 
     [Header("Rotation Settings")]
     public bool rotateToFaceDirection = true;
-    [Tooltip("Fine-tune offset if needed (leave at 0).")]
+    [Tooltip("Fine-tune offset in 90-degree steps if the sprite is sideways.")]
     public float iconAngleOffset = 0f;
 
     private void LateUpdate()
@@ -28,14 +28,15 @@ public class HoldingMapIconFollower : MonoBehaviour
 
         float t = trackedAircraft.NormalizedT;
 
-        // 1. Position: Sample position & tangent from UI Spline
+        // 1. Evaluate position & tangent along the spline
         SplineUtility.Evaluate(uiSpline.Spline, t, out float3 localSplinePos, out float3 localSplineTangent, out _);
 
+        // 2. Direct World Position: Lock Z so it stays perfectly flat on the Canvas plane
         Vector3 worldPos = uiSpline.transform.TransformPoint(localSplinePos);
         worldPos.z = aircraftIcon.position.z;
         aircraftIcon.position = worldPos;
 
-        // 2. Rotation: Transform tangent directly into Canvas local space
+        // 3. Canvas-Space Rotation
         if (rotateToFaceDirection)
         {
             Vector3 worldTangent = uiSpline.transform.TransformDirection(localSplineTangent);
@@ -45,10 +46,7 @@ public class HoldingMapIconFollower : MonoBehaviour
 
             if (canvasTangent.sqrMagnitude > 0.0001f)
             {
-                // Calculate 2D travel angle on canvas (-180 to +180)
                 float moveAngle = Mathf.Atan2(canvasTangent.y, canvasTangent.x) * Mathf.Rad2Deg;
-
-                // +90 deg aligns the down-facing sprite nose directly into the direction of travel
                 aircraftIcon.localRotation = Quaternion.Euler(0f, 0f, moveAngle + 90f + iconAngleOffset);
             }
         }

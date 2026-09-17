@@ -110,6 +110,7 @@ public class HoldingScenarioManager : MonoBehaviour
         if (stepCompleted[currentIndex])
             return;
 
+        Debug.Log("Selected Holding Type :" + sector);
         stepCompleted[currentIndex] = true;
         OnSectorSelected?.Invoke(step, sector);
 
