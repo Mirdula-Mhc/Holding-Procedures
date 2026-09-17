@@ -55,10 +55,15 @@ public class HoldingStepData : ScriptableObject
     public float approachCourse = 330f;
     public float holdingInboundCourse = 270f;
 
+    // Inside HoldingStepData.cs
     [Header("Simulation - Checkpoints")]
-    [Tooltip("Normalized spline progress T (0..1) where the aircraft pauses for the timer popup. Direct = 1 entry, Offset/Parallel = 2 entries.")]
+    [Tooltip("Normalized T where the aircraft pauses for the timer popup.")]
     public float[] pauseAtProgressT;
 
+    [Tooltip("Normalized T where each timing leg ends (when timer reaches 00:00).")]
+    public float[] timingLegEndT; // Size must match pauseAtProgressT
+
+    public float defaultCruiseSpeed = 35f;
     public float simulatedTimerDuration = 4f;
 
     // ------------------------------------------------------------------

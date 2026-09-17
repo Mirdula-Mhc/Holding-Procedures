@@ -49,6 +49,10 @@ public class HoldingUIController : MonoBehaviour
     [SerializeField] private HoldingMapView mapView;
     [SerializeField] private HoldingTimerPopup timerPopup;
 
+    [Header("Timing Calibration")]
+    [Tooltip("Target T where the timing leg ends (start of the turn).")]
+    [SerializeField] private float timingLegEndT = 0.45f;
+
     [Header("Recap Panel")]
     [SerializeField] private GameObject recapPanel;
     [SerializeField] private TextMeshProUGUI recapText;
@@ -184,6 +188,8 @@ public class HoldingUIController : MonoBehaviour
     // ------------------------------------------------------------------
 
     // Inside HoldingUIController.cs -> ShowSimulationStep()
+    // Inside HoldingUIController.cs
+
     private void ShowSimulationStep(HoldingStepData step)
     {
         simulationPanel.SetActive(true);
@@ -192,20 +198,19 @@ public class HoldingUIController : MonoBehaviour
         activeSimStep = step;
         nextCheckpointIndex = 0;
 
-        // Resolve scene instances from the ScriptableObject prefabs:
         SplineContainer activeWorldSpline = ResolveSceneSpline(step.worldSpline);
         SplineContainer activeUiSpline = ResolveSceneSpline(step.uiSpline);
 
         if (aircraftMover != null && activeWorldSpline != null)
         {
+            // Start flight at smooth cruise speed for turns
+            aircraftMover.speed = step.defaultCruiseSpeed;
             aircraftMover.SetSpline(activeWorldSpline);
             aircraftMover.Play();
         }
 
         if (mapIconFollower != null && activeUiSpline != null)
-        {
             mapIconFollower.SetUiSpline(activeUiSpline);
-        }
 
         if (hsiFeeder != null)
         {
@@ -222,6 +227,59 @@ public class HoldingUIController : MonoBehaviour
         }
 
         StartCoroutine(WatchSimulationCheckpoints());
+    }
+
+    private void HandleCheckpointReached(int checkpointIndex)
+    {
+        if (aircraftMover != null)
+            aircraftMover.Pause();
+
+        if (timerPopup != null && activeSimStep != null)
+        {
+            timerPopup.simulatedDuration = activeSimStep.simulatedTimerDuration;
+            timerPopup.Show(OnTimerStarted, OnCheckpointTimerFinished);
+        }
+        else
+        {
+            OnTimerStarted();
+        }
+    }
+
+    private void OnTimerStarted()
+    {
+        int currentLeg = nextCheckpointIndex;
+        nextCheckpointIndex++;
+
+        if (aircraftMover != null && activeSimStep != null)
+        {
+            // Check if there is a target end point configured for this checkpoint leg
+            if (activeSimStep.timingLegEndT != null && currentLeg < activeSimStep.timingLegEndT.Length)
+            {
+                float targetEndT = activeSimStep.timingLegEndT[currentLeg];
+                float currentT = aircraftMover.NormalizedT;
+                float deltaT = Mathf.Max(0.001f, targetEndT - currentT);
+
+                SplineContainer spline = ResolveSceneSpline(activeSimStep.worldSpline);
+                float totalLength = SplineUtility.CalculateLength(spline.Spline, spline.transform.localToWorldMatrix);
+                float legDistance = deltaT * totalLength;
+
+                // Dynamically adjust speed to hit targetEndT right at 00:00
+                aircraftMover.speed = legDistance / activeSimStep.simulatedTimerDuration;
+            }
+
+            aircraftMover.Play();
+        }
+
+        StartCoroutine(WatchSimulationCheckpoints());
+    }
+
+    private void OnCheckpointTimerFinished()
+    {
+        // Timer reached 00:00: return to normal cruise speed for the curved turn
+        if (aircraftMover != null && activeSimStep != null)
+        {
+            aircraftMover.speed = activeSimStep.defaultCruiseSpeed;
+        }
     }
 
     // Helper: Finds the active scene GameObject that shares the prefab's name
@@ -267,32 +325,6 @@ public class HoldingUIController : MonoBehaviour
 
             yield return null;
         }
-    }
-
-    private void HandleCheckpointReached(int checkpointIndex)
-    {
-        if (aircraftMover != null)
-            aircraftMover.Pause();
-
-        if (timerPopup != null && activeSimStep != null)
-        {
-            timerPopup.simulatedDuration = activeSimStep.simulatedTimerDuration;
-            timerPopup.Show(OnCheckpointTimerFinished);
-        }
-        else
-        {
-            OnCheckpointTimerFinished();
-        }
-    }
-
-    private void OnCheckpointTimerFinished()
-    {
-        nextCheckpointIndex++;
-
-        if (aircraftMover != null)
-            aircraftMover.Play();
-
-        StartCoroutine(WatchSimulationCheckpoints());
     }
 
     private void HandleSimulationStepComplete()
