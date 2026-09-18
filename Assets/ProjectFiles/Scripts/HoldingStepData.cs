@@ -49,7 +49,11 @@ public class HoldingStepData : ScriptableObject
     public SplineContainer uiSpline;
 
     [Tooltip("Whether HoldingMapView should draw a dotted preview of this entry's path. Only 2 of the 3 entry types need this.")]
-    public bool showDottedEntryPath;
+    // Inside HoldingStepData.cs
+    [Header("Entry Path Display")]
+    public bool showDottedEntryPath = true; // False for Direct, True for Offset/Parallel
+    [Tooltip("Normalized T where the entry maneuver finishes merging into the pattern.")]
+    public float entryPathEndT = 0.40f;
 
     [Header("Simulation - HSI")]
     public float approachCourse = 330f;

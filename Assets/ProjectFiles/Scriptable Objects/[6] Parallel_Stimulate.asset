@@ -20,6 +20,7 @@ MonoBehaviour:
   worldSpline: {fileID: 2794321006748533891, guid: 054d38ad6e5c3f243aa01694c055060e, type: 3}
   uiSpline: {fileID: 6314863661346706900, guid: d3aa3d6daba48214d939bcd4cbce01a6, type: 3}
   showDottedEntryPath: 1
+  entryPathEndT: 0.3753
   approachCourse: 130
   holdingInboundCourse: 270
   pauseAtProgressT:

@@ -533,6 +533,10 @@ PrefabInstance:
       value: 1000000
       objectReference: {fileID: 0}
     - target: {fileID: -1853094968961178454, guid: 3476280a957188246bcc1f238f4c3841, type: 3}
+      propertyPath: m_CullingMask.m_Bits
+      value: 23
+      objectReference: {fileID: 0}
+    - target: {fileID: -1853094968961178454, guid: 3476280a957188246bcc1f238f4c3841, type: 3}
       propertyPath: m_projectionMatrixMode
       value: 1
       objectReference: {fileID: 0}
@@ -3278,6 +3282,7 @@ RectTransform:
   m_Children:
   - {fileID: 50763467}
   - {fileID: 1703415293}
+  - {fileID: 1733859061}
   m_Father: {fileID: 1427421141}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -4445,6 +4450,11 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &668736468 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2978390188070324539, guid: d3aa3d6daba48214d939bcd4cbce01a6, type: 3}
+  m_PrefabInstance: {fileID: 544960291601224585}
+  m_PrefabAsset: {fileID: 0}
 --- !u!28 &681872423
 Texture2D:
   m_ObjectHideFlags: 0
@@ -5005,7 +5015,7 @@ Transform:
   m_GameObject: {fileID: 733693787}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1.81, y: 1.06, z: -4.61}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -5187,6 +5197,18 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 960416690951476764, guid: d3aa3d6daba48214d939bcd4cbce01a6, type: 3}
   m_PrefabInstance: {fileID: 544960291601224585}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &787978229
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 668736468}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d025ed68eda410849b452fedac800b1b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SplineKnotPrinter
 --- !u!1 &795486173
 GameObject:
   m_ObjectHideFlags: 0
@@ -13451,6 +13473,152 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1703415292}
   m_CullTransparentMesh: 1
+--- !u!1 &1733859060
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1733859061}
+  - component: {fileID: 1733859062}
+  m_Layer: 5
+  m_Name: Entry_Dotted_Line
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1733859061
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1733859060}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 479341107}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 78.9, y: 0}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!120 &1733859062
+LineRenderer:
+  serializedVersion: 3
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1733859060}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 0
+  m_LightProbeUsage: 0
+  m_ReflectionProbeUsage: 0
+  m_RayTracingMode: 0
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 259291748607da94e80cf8ae5e5e32d3, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 10
+  m_MaskInteraction: 0
+  m_Positions:
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  m_Parameters:
+    serializedVersion: 3
+    widthMultiplier: 1
+    widthCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0.33333334
+        outWeight: 0.33333334
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    colorGradient:
+      serializedVersion: 2
+      key0: {r: 0, g: 1, b: 0.9901748, a: 1}
+      key1: {r: 1, g: 1, b: 1, a: 1}
+      key2: {r: 0, g: 0, b: 0, a: 0}
+      key3: {r: 0, g: 0, b: 0, a: 0}
+      key4: {r: 0, g: 0, b: 0, a: 0}
+      key5: {r: 0, g: 0, b: 0, a: 0}
+      key6: {r: 0, g: 0, b: 0, a: 0}
+      key7: {r: 0, g: 0, b: 0, a: 0}
+      ctime0: 0
+      ctime1: 65535
+      ctime2: 0
+      ctime3: 0
+      ctime4: 0
+      ctime5: 0
+      ctime6: 0
+      ctime7: 0
+      atime0: 0
+      atime1: 65535
+      atime2: 0
+      atime3: 0
+      atime4: 0
+      atime5: 0
+      atime6: 0
+      atime7: 0
+      m_Mode: 0
+      m_ColorSpace: 0
+      m_NumColorKeys: 2
+      m_NumAlphaKeys: 2
+    numCornerVertices: 50
+    numCapVertices: 0
+    alignment: 0
+    textureMode: 1
+    textureScale: {x: 0.25, y: 0.25}
+    shadowBias: 0.5
+    generateLightingData: 0
+  m_UseWorldSpace: 1
+  m_Loop: 0
+  m_ApplyActiveColorSpace: 1
 --- !u!1 &1744082020
 GameObject:
   m_ObjectHideFlags: 0
@@ -15159,13 +15327,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HoldingScenarioManager
   steps:
-  - {fileID: 11400000, guid: 7053ef67359f76e48a04c3ef58f066ec, type: 2}
-  - {fileID: 11400000, guid: 2ec00716b70e0f247bf5648b57666e68, type: 2}
-  - {fileID: 11400000, guid: aaa245cf11f07fd4ea2d1b483e046876, type: 2}
-  - {fileID: 11400000, guid: f1ea53aa3a3f71f4b9d3edb6abf235b4, type: 2}
-  - {fileID: 11400000, guid: 25828d5a80d6b844a8acd0b91e6b7a53, type: 2}
   - {fileID: 11400000, guid: 4d4496e8e773f4b408dd0538a669d31a, type: 2}
   - {fileID: 11400000, guid: 65cb486d90b06f64b927e30026d5136c, type: 2}
+  - {fileID: 11400000, guid: f1ea53aa3a3f71f4b9d3edb6abf235b4, type: 2}
+  - {fileID: 11400000, guid: 25828d5a80d6b844a8acd0b91e6b7a53, type: 2}
+  - {fileID: 11400000, guid: 2ec00716b70e0f247bf5648b57666e68, type: 2}
+  - {fileID: 11400000, guid: aaa245cf11f07fd4ea2d1b483e046876, type: 2}
 --- !u!1 &1880517203
 GameObject:
   m_ObjectHideFlags: 0
@@ -16861,12 +17028,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 39c0453f3faa7bd409644d5efb169811, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HoldingMapView
-  mapPanel: {fileID: 0}
-  worldOrigin: {fileID: 0}
-  worldUnitsToMapPixels: 1
-  dotTemplate: {fileID: 0}
-  dotSpacingWorldUnits: 20
-  entryPathHighlightColor: {r: 0.345, g: 0.843, b: 0.925, a: 1}
+  entryLineRenderer: {fileID: 1733859062}
+  resolution: 60
+  forwardZOffset: -0.2
 --- !u!1 &2104281608
 GameObject:
   m_ObjectHideFlags: 0
@@ -17007,7 +17171,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 2978390188070324539, guid: d3aa3d6daba48214d939bcd4cbce01a6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 787978229}
   m_SourcePrefab: {fileID: 100100000, guid: d3aa3d6daba48214d939bcd4cbce01a6, type: 3}
 --- !u!1001 &1877456378244478602
 PrefabInstance:

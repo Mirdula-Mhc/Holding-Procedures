@@ -19,7 +19,8 @@ MonoBehaviour:
   correctSector: 1
   worldSpline: {fileID: 7018789086066834461, guid: 7494f05f416577545a7f7a605907d5f1, type: 3}
   uiSpline: {fileID: 5629475408913673018, guid: 41cc3acbd8b30b24d81735eb5b0db3fc, type: 3}
-  showDottedEntryPath: 0
+  showDottedEntryPath: 1
+  entryPathEndT: 0.2229
   approachCourse: 60
   holdingInboundCourse: 270
   pauseAtProgressT:

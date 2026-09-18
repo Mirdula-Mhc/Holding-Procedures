@@ -219,11 +219,15 @@ public class HoldingUIController : MonoBehaviour
             hsiFeeder.ResetFixCrossing();
         }
 
+        // Inside HoldingUIController.cs -> ShowSimulationStep()
+        // Inside HoldingUIController.cs -> ShowSimulationStep()
+
         if (mapView != null)
         {
             mapView.ClearEntryPath();
-            if (step.showDottedEntryPath && activeWorldSpline != null)
-                mapView.ShowEntryPath(activeWorldSpline);
+            // FIX: Pass activeUiSpline so it evaluates the spline on the Map panel
+            if (step.showDottedEntryPath && activeUiSpline != null)
+                mapView.ShowEntryPath(activeUiSpline, step.entryPathEndT);
         }
 
         StartCoroutine(WatchSimulationCheckpoints());
