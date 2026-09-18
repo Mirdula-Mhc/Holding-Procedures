@@ -245,6 +245,7 @@ public class HoldingUIController : MonoBehaviour
         }
     }
 
+    // Inside HoldingUIController.cs
     private void OnTimerStarted()
     {
         int currentLeg = nextCheckpointIndex;
@@ -252,18 +253,23 @@ public class HoldingUIController : MonoBehaviour
 
         if (aircraftMover != null && activeSimStep != null)
         {
-            // Check if there is a target end point configured for this checkpoint leg
             if (activeSimStep.timingLegEndT != null && currentLeg < activeSimStep.timingLegEndT.Length)
             {
                 float targetEndT = activeSimStep.timingLegEndT[currentLeg];
                 float currentT = aircraftMover.NormalizedT;
-                float deltaT = Mathf.Max(0.001f, targetEndT - currentT);
+
+                // Handle closed-loop wrap (if starting near 0.99/0.00)
+                float deltaT = targetEndT - currentT;
+                if (deltaT < 0f && currentT > 0.9f)
+                    deltaT += 1.0f;
+
+                deltaT = Mathf.Max(0.01f, deltaT);
 
                 SplineContainer spline = ResolveSceneSpline(activeSimStep.worldSpline);
                 float totalLength = SplineUtility.CalculateLength(spline.Spline, spline.transform.localToWorldMatrix);
                 float legDistance = deltaT * totalLength;
 
-                // Dynamically adjust speed to hit targetEndT right at 00:00
+                // Calculates the exact speed to reach targetEndT right at 00:00
                 aircraftMover.speed = legDistance / activeSimStep.simulatedTimerDuration;
             }
 

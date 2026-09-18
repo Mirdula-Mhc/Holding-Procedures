@@ -23,7 +23,10 @@ MonoBehaviour:
   approachCourse: 330
   holdingInboundCourse: 270
   pauseAtProgressT:
-  - 0.43
-  simulatedTimerDuration: 6
+  - 0.3312
+  timingLegEndT:
+  - 0.5495
+  defaultCruiseSpeed: 10
+  simulatedTimerDuration: 4
   recapText: 
   voiceover: {fileID: 0}
