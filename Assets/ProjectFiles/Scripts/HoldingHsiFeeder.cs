@@ -33,14 +33,16 @@ public class HoldingHsiFeeder : MonoBehaviour
     [Tooltip("Radius directly over the fix where station signal is lost (NAV flag turns ON, needle centers).")]
     public float coneOfConfusionRadius = 4f;
 
-    /// <summary>
-    /// While true, this feeder stops writing hsi.course (the course knob owns it), and the
-    /// heading/deviation/flag/DME values are frozen exactly as they were. Set by
-    /// HoldingUIController while the course knob is on screen.
-    /// </summary>
+    /// <summary>While true, the whole HSI is frozen (used while the knob is on screen).</summary>
     [HideInInspector] public bool courseOverride;
 
+    // When set, this course is written to the HSI instead of the computed one.
+    private float? heldCourse;
+
     private bool hasCrossedFix = false;
+
+    public void HoldCourse(float course) => heldCourse = course;
+    public void ReleaseCourse() => heldCourse = null;
 
     private void Start()
     {
@@ -52,8 +54,7 @@ public class HoldingHsiFeeder : MonoBehaviour
         if (aircraft == null || fix == null || hsi == null)
             return;
 
-        // Knob is active: the aircraft is paused and the whole HSI must stay exactly as it was.
-        // Only the course pointer changes, and the knob drives that itself.
+        // Knob is active: the whole HSI stays exactly as it was.
         if (courseOverride)
             return;
 
@@ -61,7 +62,6 @@ public class HoldingHsiFeeder : MonoBehaviour
         toAircraft.y = 0f;
         float groundDistance = toAircraft.magnitude;
 
-        // Switch to holding course once the fix is crossed
         if (!hasCrossedFix && groundDistance <= fixCrossingRadius)
         {
             hasCrossedFix = true;
@@ -69,9 +69,9 @@ public class HoldingHsiFeeder : MonoBehaviour
 
         float activeCourse = hasCrossedFix ? holdingInboundCourse : approachCourse;
 
-        // 1. Heading & Course
+        // 1. Heading & Course (a course the user has set is held; everything else stays live)
         hsi.heading = Wrap360(aircraft.eulerAngles.y);
-        hsi.course = activeCourse;
+        hsi.course = heldCourse ?? activeCourse;
 
         // 2. DME
         float rawDme = groundDistance / worldUnitsPerNauticalMile;
@@ -85,7 +85,7 @@ public class HoldingHsiFeeder : MonoBehaviour
         bool inCone = groundDistance <= coneOfConfusionRadius;
         hsi.navFlag = inCone ? A320HSI.NavFlag.OFF : ComputeNavFlag(toAircraft, activeCourse);
 
-        // 4. CDI Deviation (pinned to 0 inside cone of confusion to eliminate glitching)
+        // 4. CDI Deviation
         if (inCone)
         {
             hsi.deviation = 0f;
@@ -106,7 +106,6 @@ public class HoldingHsiFeeder : MonoBehaviour
 
         float crossTrack = Vector3.Cross(courseDir, toAircraft).y;
 
-        // Fly-To deflection
         float angularDeviation = -Mathf.Atan2(crossTrack, groundDistance) * Mathf.Rad2Deg;
         return Mathf.Clamp(angularDeviation, -10f, 10f);
     }
@@ -123,6 +122,7 @@ public class HoldingHsiFeeder : MonoBehaviour
     public void ResetFixCrossing()
     {
         hasCrossedFix = false;
+        heldCourse = null;
     }
 
     private static float Wrap360(float degrees)

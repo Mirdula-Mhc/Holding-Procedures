@@ -17,25 +17,50 @@ public enum HoldingStepType
 
 public enum HoldingEntryType { Direct, Offset, Parallel }
 
-// One group per pause point. The aircraft pauses at pauseAtT, the course knob appears,
-// then the Start Timer popup, then the aircraft flies to legEndT while the timer counts down.
+// What appears when the aircraft pauses at a checkpoint. Knob always comes before the timer.
+public enum HoldingCheckpointMode
+{
+    KnobThenTimer,  // knob -> correct panel -> post-knob audio -> Start Timer button
+    KnobOnly,       // knob -> correct panel -> aircraft resumes at cruise speed
+    TimerOnly       // Start Timer button straight away
+}
+
+// One group per pause point.
 [System.Serializable]
 public struct HoldingCheckpoint
 {
-    [Tooltip("Course (degrees) the user must dial on the knob. Set button appears within +/- tolerance of this.")]
-     public float requiredCourse;
-
-    [Tooltip("Timer length shown in the popup, in minutes (1 or 2). Display only - not real time.")]
-     public int timerMinutes;
+    [Tooltip("What appears at this pause.")]
+    public HoldingCheckpointMode mode;
 
     [Tooltip("Normalized spline T where the aircraft pauses. This is also where the timing leg starts.")]
-     public float pauseAtT;
+    public float pauseAtT;
 
-    [Tooltip("Normalized spline T where the timing leg ends (timer reaches 00:00 as the aircraft arrives here).")]
-     public float legEndT;
+    [Tooltip("Course (degrees) the user must dial on the knob. Must match exactly. Ignored for TimerOnly.")]
+    public float requiredCourse;
 
-    [Tooltip("Real seconds the countdown takes. The aircraft's leg speed is auto-calculated from this and the distance to legEndT.")]
+    [Tooltip("Timer length shown in the popup, in minutes (1 or 2). Display only. Ignored for KnobOnly.")]
+    public int timerMinutes;
+
+    [Tooltip("Normalized spline T where the timing leg ends. Ignored for KnobOnly.")]
+    public float legEndT;
+
+    [Tooltip("Real seconds the countdown takes. Leg speed is auto-calculated from this and the distance to legEndT. Ignored for KnobOnly.")]
     public float simulatedDuration;
+
+    [Tooltip("Plays as soon as the aircraft pauses. The aircraft (and knob/timer) wait until it finishes. Optional.")]
+    public AudioClip pauseAudio;
+
+    [Tooltip("Plays after the 'correct' panel, before the Start Timer button appears. Only used in KnobThenTimer. Optional.")]
+    public AudioClip postKnobAudio;
+}
+
+// Plays while the aircraft is flying, the moment it passes triggerT. Independent of checkpoints.
+[System.Serializable]
+public struct HoldingParallelAudio
+{
+    [Tooltip("Normalized spline T at which this clip starts playing.")]
+    public float triggerT;
+    public AudioClip clip;
 }
 
 [CreateAssetMenu(fileName = "Step_", menuName = "A320/Holding Step Data")]
@@ -90,8 +115,12 @@ public class HoldingStepData : ScriptableObject
     public float defaultCruiseSpeed = 35f;
 
     [Header("Simulation - Checkpoints")]
-    [Tooltip("One entry per pause point. Direct = 1, Offset/Parallel = 2.")]
+    [Tooltip("One entry per pause point, in the order the aircraft reaches them.")]
     public HoldingCheckpoint[] checkpoints;
+
+    [Header("Simulation - Parallel Audio")]
+    [Tooltip("Clips that play while the aircraft flies, each starting when the aircraft passes its Trigger T. Independent of checkpoints.")]
+    public HoldingParallelAudio[] parallelAudios;
 
     // ------------------------------------------------------------------
     // RECAP

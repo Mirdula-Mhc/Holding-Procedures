@@ -25,13 +25,17 @@ MonoBehaviour:
   entryPathEndT: 0.2229
   approachCourse: 60
   holdingInboundCourse: 270
-  pauseAtProgressT:
-  - 0.0552
-  - 0.4604
-  timingLegEndT:
-  - 0.225
-  - 0.6713
   defaultCruiseSpeed: 10
-  simulatedTimerDuration: 2
+  checkpoints:
+  - requiredCourse: 270
+    timerMinutes: 2
+    pauseAtT: 0.0552
+    legEndT: 0.225
+    simulatedDuration: 60
+  - requiredCourse: 90
+    timerMinutes: 1
+    pauseAtT: 0.4604
+    legEndT: 0.6713
+    simulatedDuration: 30
   recapText: 
   voiceover: {fileID: 0}

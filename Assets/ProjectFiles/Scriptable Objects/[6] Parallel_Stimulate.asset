@@ -18,20 +18,47 @@ MonoBehaviour:
   familiarizationLabel: 
   showInfoPanel: 0
   infoPanelText: 
-  correctSector: 1
+  correctSector: 2
   worldSpline: {fileID: 2794321006748533891, guid: 054d38ad6e5c3f243aa01694c055060e, type: 3}
   uiSpline: {fileID: 6314863661346706900, guid: d3aa3d6daba48214d939bcd4cbce01a6, type: 3}
   showDottedEntryPath: 1
   entryPathEndT: 0.3753
   approachCourse: 130
   holdingInboundCourse: 270
-  pauseAtProgressT:
-  - 0.1104
-  - 0.5256
-  timingLegEndT:
-  - 0.3746
-  - 0.7126
-  defaultCruiseSpeed: 10
-  simulatedTimerDuration: 2
+  defaultCruiseSpeed: 5
+  checkpoints:
+  - mode: 0
+    pauseAtT: 0.085
+    requiredCourse: 90
+    timerMinutes: 1
+    legEndT: 0.2514
+    simulatedDuration: 30
+    pauseAudio: {fileID: 0}
+    postKnobAudio: {fileID: 0}
+  - mode: 1
+    pauseAtT: 0.2514
+    requiredCourse: 247
+    timerMinutes: 0
+    legEndT: 0
+    simulatedDuration: 0
+    pauseAudio: {fileID: 0}
+    postKnobAudio: {fileID: 0}
+  - mode: 1
+    pauseAtT: 0.318
+    requiredCourse: 270
+    timerMinutes: 0
+    legEndT: 0
+    simulatedDuration: 0
+    pauseAudio: {fileID: 0}
+    postKnobAudio: {fileID: 0}
+  - mode: 2
+    pauseAtT: 0.5808
+    requiredCourse: 90
+    timerMinutes: 1
+    legEndT: 0.7461
+    simulatedDuration: 30
+    pauseAudio: {fileID: 0}
+    postKnobAudio: {fileID: 0}
+  parallelAudios: []
   recapText: 
   voiceover: {fileID: 0}

@@ -1,14 +1,13 @@
-using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
-using UnityEngine.Splines;
 using UnityEngine.UI;
 
 public class HoldingUIController : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private HoldingScenarioManager scenarioManager;
+    [SerializeField] private HoldingSimulationController simulationController;
 
     [Header("Familiarization Panel")]
     [SerializeField] private GameObject familiarizationPanel;
@@ -32,12 +31,6 @@ public class HoldingUIController : MonoBehaviour
 
     [Header("Simulation Panel")]
     [SerializeField] private GameObject simulationPanel;
-    [SerializeField] private SplineAircraftMover aircraftMover;
-    [SerializeField] private HoldingHsiFeeder hsiFeeder;
-    [SerializeField] private HoldingMapIconFollower mapIconFollower;
-    [SerializeField] private HoldingMapView mapView;
-    [SerializeField] private HoldingTimerPopup timerPopup;
-    [SerializeField] private HoldingCourseKnob courseKnob;
 
     [Header("Recap Panel")]
     [SerializeField] private GameObject recapPanel;
@@ -53,9 +46,6 @@ public class HoldingUIController : MonoBehaviour
         public string id;
         public GameObject element;
     }
-
-    private HoldingStepData activeSimStep;
-    private int nextCheckpointIndex;
 
     private void Awake()
     {
@@ -78,8 +68,6 @@ public class HoldingUIController : MonoBehaviour
     {
         scenarioManager.OnStepLoaded += HandleStepLoaded;
         scenarioManager.OnVoiceoverComplete += HandleVoiceoverComplete;
-        scenarioManager.OnSectorSelected += HandleSectorSelected;
-        scenarioManager.OnCheckpointReached += HandleCheckpointReached;
         scenarioManager.OnSimulationStepComplete += HandleSimulationStepComplete;
         scenarioManager.OnAllStepsComplete += HandleAllStepsComplete;
     }
@@ -88,8 +76,6 @@ public class HoldingUIController : MonoBehaviour
     {
         scenarioManager.OnStepLoaded -= HandleStepLoaded;
         scenarioManager.OnVoiceoverComplete -= HandleVoiceoverComplete;
-        scenarioManager.OnSectorSelected -= HandleSectorSelected;
-        scenarioManager.OnCheckpointReached -= HandleCheckpointReached;
         scenarioManager.OnSimulationStepComplete -= HandleSimulationStepComplete;
         scenarioManager.OnAllStepsComplete -= HandleAllStepsComplete;
     }
@@ -100,12 +86,9 @@ public class HoldingUIController : MonoBehaviour
 
     private void HandleStepLoaded(HoldingStepData step, int index)
     {
-        StopAllCoroutines();
-
-        // Leaving a step mid-knob or mid-timer must never leave anything stuck on screen.
-        if (courseKnob != null) courseKnob.Hide();
-        if (timerPopup != null) timerPopup.Hide();
-        if (hsiFeeder != null) hsiFeeder.courseOverride = false;
+        // Leaving any step must stop the simulation, its audio, knob and timer.
+        if (simulationController != null)
+            simulationController.StopEverything();
 
         HideAllPanels();
 
@@ -118,14 +101,13 @@ public class HoldingUIController : MonoBehaviour
                 ShowSectorSelectStep(step);
                 break;
             case HoldingStepType.Simulation:
-                ShowSimulationStep(step);
+                ShowSimulationStep(step, index);
                 break;
             case HoldingStepType.Recap:
                 ShowRecapStep(step);
                 break;
         }
 
-        // Nav state is decided once, AFTER the step is fully set up.
         RefreshNavigation();
     }
 
@@ -150,61 +132,15 @@ public class HoldingUIController : MonoBehaviour
         parallelButton.interactable = step.correctSector == HoldingEntryType.Parallel;
     }
 
-    private void HandleSectorSelected(HoldingStepData step, HoldingEntryType sector)
-    {
-    }
-
-    private void ShowSimulationStep(HoldingStepData step)
+    private void ShowSimulationStep(HoldingStepData step, int index)
     {
         simulationPanel.SetActive(true);
-
-        activeSimStep = step;
-        nextCheckpointIndex = 0;
-
         UpdateInfoPanel(step);
 
-        SplineContainer activeWorldSpline = ResolveSceneSpline(step.worldSpline);
-        SplineContainer activeUiSpline = ResolveSceneSpline(step.uiSpline);
+        bool alreadyCompleted = scenarioManager.IsCompleted(index);
 
-        bool alreadyCompleted = scenarioManager.IsCompleted(scenarioManager.CurrentIndex);
-
-        if (hsiFeeder != null)
-        {
-            hsiFeeder.approachCourse = step.approachCourse;
-            hsiFeeder.holdingInboundCourse = step.holdingInboundCourse;
-            hsiFeeder.ResetFixCrossing();
-        }
-
-        if (aircraftMover != null && activeWorldSpline != null)
-        {
-            aircraftMover.speed = step.defaultCruiseSpeed;
-            aircraftMover.SetSpline(activeWorldSpline);
-
-            if (alreadyCompleted)
-            {
-                // Revisit: no flight, no knob, no timer. Park the aircraft at the end.
-                aircraftMover.Pause();
-                aircraftMover.SeekToNormalized(1f);
-            }
-            else
-            {
-                aircraftMover.Play();
-            }
-        }
-
-        if (mapIconFollower != null && activeUiSpline != null)
-            mapIconFollower.SetUiSpline(activeUiSpline);
-
-        if (mapView != null)
-        {
-            mapView.ClearEntryPath();
-            if (step.showDottedEntryPath && activeUiSpline != null)
-                mapView.ShowEntryPath(activeUiSpline, step.entryPathEndT);
-        }
-
-        // Only watch checkpoints on a fresh run. On revisit nothing should trigger.
-        if (!alreadyCompleted)
-            StartCoroutine(WatchSimulationCheckpoints());
+        if (simulationController != null)
+            simulationController.BeginStep(step, alreadyCompleted);
     }
 
     private void ShowRecapStep(HoldingStepData step)
@@ -225,168 +161,8 @@ public class HoldingUIController : MonoBehaviour
     }
 
     // ==================================================
-    // SIMULATION FLOW
-    //
-    // At every checkpoint:
-    //   1. aircraft pauses
-    //   2. course knob appears (HSI frozen except the course pointer)
-    //   3. user sets the course and presses Set
-    //   4. Start Timer popup appears
-    //   5. user presses Start Timer -> aircraft flies the leg while the countdown runs
+    // EVENTS
     // ==================================================
-
-    private void HandleCheckpointReached(int checkpointIndex)
-    {
-        if (aircraftMover != null)
-            aircraftMover.Pause();
-
-        if (activeSimStep == null ||
-            activeSimStep.checkpoints == null ||
-            checkpointIndex < 0 ||
-            checkpointIndex >= activeSimStep.checkpoints.Length)
-        {
-            Debug.LogWarning($"HoldingUIController: no checkpoint data for index {checkpointIndex}.");
-            OnTimerStarted();
-            return;
-        }
-
-        HoldingCheckpoint checkpoint = activeSimStep.checkpoints[checkpointIndex];
-
-        if (courseKnob != null)
-        {
-            // Freeze the HSI: feeder stops updating everything, knob only drives the course pointer.
-            if (hsiFeeder != null)
-                hsiFeeder.courseOverride = true;
-
-            courseKnob.Show(checkpoint.requiredCourse, OnCourseSet);
-        }
-        else
-        {
-            ShowTimerPopup();
-        }
-    }
-
-    private void OnCourseSet()
-    {
-        // Hand the HSI back to the feeder, then show the timer popup.
-        if (hsiFeeder != null)
-            hsiFeeder.courseOverride = false;
-
-        ShowTimerPopup();
-    }
-
-    private void ShowTimerPopup()
-    {
-        HoldingCheckpoint? checkpoint = GetCheckpoint(nextCheckpointIndex);
-
-        if (timerPopup != null && checkpoint.HasValue)
-        {
-            timerPopup.Show(
-                checkpoint.Value.timerMinutes,
-                checkpoint.Value.simulatedDuration,
-                OnTimerStarted,
-                OnCheckpointTimerFinished);
-        }
-        else
-        {
-            OnTimerStarted();
-        }
-    }
-
-    private void OnTimerStarted()
-    {
-        int currentLeg = nextCheckpointIndex;
-        nextCheckpointIndex++;
-
-        HoldingCheckpoint? checkpoint = GetCheckpoint(currentLeg);
-
-        if (aircraftMover != null && activeSimStep != null)
-        {
-            if (checkpoint.HasValue)
-            {
-                float targetEndT = checkpoint.Value.legEndT;
-                float currentT = aircraftMover.NormalizedT;
-
-                float deltaT = targetEndT - currentT;
-                if (deltaT < 0f && currentT > 0.9f)
-                    deltaT += 1.0f;
-
-                deltaT = Mathf.Max(0.01f, deltaT);
-
-                SplineContainer spline = ResolveSceneSpline(activeSimStep.worldSpline);
-                float totalLength = SplineUtility.CalculateLength(spline.Spline, spline.transform.localToWorldMatrix);
-                float legDistance = deltaT * totalLength;
-
-                // Auto-calculated leg speed: arrives at legEndT exactly as the countdown hits 00:00.
-                aircraftMover.speed = legDistance / checkpoint.Value.simulatedDuration;
-            }
-
-            aircraftMover.Play();
-        }
-
-        StartCoroutine(WatchSimulationCheckpoints());
-    }
-
-    private void OnCheckpointTimerFinished()
-    {
-        if (aircraftMover != null && activeSimStep != null)
-            aircraftMover.speed = activeSimStep.defaultCruiseSpeed;
-    }
-
-    private HoldingCheckpoint? GetCheckpoint(int index)
-    {
-        if (activeSimStep == null || activeSimStep.checkpoints == null)
-            return null;
-
-        if (index < 0 || index >= activeSimStep.checkpoints.Length)
-            return null;
-
-        return activeSimStep.checkpoints[index];
-    }
-
-    private SplineContainer ResolveSceneSpline(SplineContainer prefabOrSceneSpline)
-    {
-        if (prefabOrSceneSpline == null) return null;
-
-        if (prefabOrSceneSpline.gameObject.scene.IsValid())
-            return prefabOrSceneSpline;
-
-        GameObject sceneObj = GameObject.Find(prefabOrSceneSpline.name);
-        if (sceneObj != null && sceneObj.TryGetComponent(out SplineContainer sceneSpline))
-            return sceneSpline;
-
-        return prefabOrSceneSpline;
-    }
-
-    private IEnumerator WatchSimulationCheckpoints()
-    {
-        Debug.Log($"Watching. checkpoints={(activeSimStep.checkpoints == null ? -1 : activeSimStep.checkpoints.Length)} next={nextCheckpointIndex}");
-        while (activeSimStep != null)
-        {
-            if (aircraftMover == null)
-                yield break;
-
-            HoldingCheckpoint[] checkpoints = activeSimStep.checkpoints;
-            int count = checkpoints != null ? checkpoints.Length : 0;
-
-            if (nextCheckpointIndex < count)
-            {
-                float target = checkpoints[nextCheckpointIndex].pauseAtT;
-                if (aircraftMover.NormalizedT >= target)
-                {
-                    scenarioManager.NotifyCheckpointReached(nextCheckpointIndex);
-                    yield break;
-                }
-            }
-            else if (aircraftMover.ReachedEnd)
-            {
-                scenarioManager.NotifySimulationStepComplete();
-                yield break;
-            }
-
-            yield return null;
-        }
-    }
 
     private void HandleSimulationStepComplete()
     {
@@ -449,7 +225,5 @@ public class HoldingUIController : MonoBehaviour
 
         if (infoPanel != null)
             infoPanel.SetActive(false);
-
-        activeSimStep = null;
     }
 }

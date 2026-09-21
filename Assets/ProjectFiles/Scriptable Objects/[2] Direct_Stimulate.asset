@@ -25,7 +25,7 @@ MonoBehaviour:
   entryPathEndT: 0.4
   approachCourse: 330
   holdingInboundCourse: 270
-  defaultCruiseSpeed: 10
+  defaultCruiseSpeed: 6
   checkpoints:
   - requiredCourse: 90
     timerMinutes: 1
