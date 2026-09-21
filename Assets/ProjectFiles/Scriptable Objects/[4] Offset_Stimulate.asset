@@ -16,6 +16,8 @@ MonoBehaviour:
   stepType: 2
   highlightElementId: 
   familiarizationLabel: 
+  showInfoPanel: 0
+  infoPanelText: 
   correctSector: 1
   worldSpline: {fileID: 7018789086066834461, guid: 7494f05f416577545a7f7a605907d5f1, type: 3}
   uiSpline: {fileID: 5629475408913673018, guid: 41cc3acbd8b30b24d81735eb5b0db3fc, type: 3}
@@ -29,7 +31,7 @@ MonoBehaviour:
   timingLegEndT:
   - 0.225
   - 0.6713
-  defaultCruiseSpeed: 8
-  simulatedTimerDuration: 4
+  defaultCruiseSpeed: 10
+  simulatedTimerDuration: 2
   recapText: 
   voiceover: {fileID: 0}

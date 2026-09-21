@@ -33,6 +33,13 @@ public class HoldingHsiFeeder : MonoBehaviour
     [Tooltip("Radius directly over the fix where station signal is lost (NAV flag turns ON, needle centers).")]
     public float coneOfConfusionRadius = 4f;
 
+    /// <summary>
+    /// While true, this feeder stops writing hsi.course (the course knob owns it), and the
+    /// heading/deviation/flag/DME values are frozen exactly as they were. Set by
+    /// HoldingUIController while the course knob is on screen.
+    /// </summary>
+    [HideInInspector] public bool courseOverride;
+
     private bool hasCrossedFix = false;
 
     private void Start()
@@ -43,6 +50,11 @@ public class HoldingHsiFeeder : MonoBehaviour
     private void Update()
     {
         if (aircraft == null || fix == null || hsi == null)
+            return;
+
+        // Knob is active: the aircraft is paused and the whole HSI must stay exactly as it was.
+        // Only the course pointer changes, and the knob drives that itself.
+        if (courseOverride)
             return;
 
         Vector3 toAircraft = aircraft.position - fix.position;
@@ -83,7 +95,6 @@ public class HoldingHsiFeeder : MonoBehaviour
             hsi.deviation = ComputeCrossTrackDeviation(toAircraft, groundDistance, activeCourse);
         }
     }
-
 
     private float ComputeCrossTrackDeviation(Vector3 toAircraft, float groundDistance, float course)
     {

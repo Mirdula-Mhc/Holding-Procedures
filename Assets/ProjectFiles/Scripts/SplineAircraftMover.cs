@@ -99,6 +99,30 @@ public class SplineAircraftMover : MonoBehaviour
         }
     }
 
+    /// <summary>Jumps to a normalized position on the current spline and applies the pose immediately, without playing.</summary>
+    public void SeekToNormalized(float t)
+    {
+        if (spline == null || splineLength <= 0f)
+            return;
+
+        distanceTraveled = Mathf.Clamp01(t) * splineLength;
+        hasPreviousHeading = false;
+        currentBank = 0f;
+        bankVelocity = 0f;
+
+        SplineUtility.Evaluate(spline.Spline, Mathf.Clamp01(t), out float3 splinePos, out float3 splineTangent, out float3 splineUp);
+
+        Vector3 worldPos = spline.transform.TransformPoint(splinePos);
+        Vector3 worldTangent = spline.transform.TransformDirection(((Vector3)splineTangent).normalized);
+
+        transform.position = worldPos;
+
+        if (worldTangent.sqrMagnitude > 0.0001f)
+        {
+            float headingY = Quaternion.LookRotation(worldTangent, Vector3.up).eulerAngles.y;
+            transform.rotation = Quaternion.Euler(0f, headingY, 0f);
+        }
+    }
     // Bank is derived from the aircraft's OWN actual turn rate (heading change per second),
     // never set directly - so however the spline curves, the visual bank always matches what
     // that curve is actually doing to the heading, the same "derive it, don't fake it" approach
@@ -120,6 +144,7 @@ public class SplineAircraftMover : MonoBehaviour
 
         currentBank = Mathf.SmoothDampAngle(currentBank, targetBank, ref bankVelocity, bankSmoothDuration);
     }
+
 
     private void CacheSplineLength()
     {

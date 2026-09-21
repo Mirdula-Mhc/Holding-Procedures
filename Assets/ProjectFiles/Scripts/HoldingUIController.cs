@@ -1,17 +1,3 @@
-// HoldingUIController.cs
-//
-// Mirrors UIController.cs: subscribes to HoldingScenarioManager's events, shows/hides panels
-// based on the current step's stepType, and is the ONLY thing that touches nextButton /
-// previousButton .interactable (via UnlockNavigation - the single gatekeeper, same role as
-// ATC's UIController.UnlockNavigation()). There is exactly one Next button and one Previous
-// button for the whole flow - no per-step, no per-sector buttons.
-//
-// This script also owns wiring the current step's data into the existing simulation components
-// (SplineAircraftMover, HoldingHsiFeeder, HoldingMapIconFollower, HoldingMapView,
-// HoldingTimerPopup) - those components stay exactly as already built; this is the layer that
-// tells them which scenario's values to use, same relationship UIController has to
-// AnimationController/VideoController in ATC.
-
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
@@ -28,12 +14,15 @@ public class HoldingUIController : MonoBehaviour
     [SerializeField] private GameObject familiarizationPanel;
     [SerializeField] private TextMeshProUGUI familiarizationLabelText;
 
-    [Tooltip("Every highlightable element on the familiarization page, keyed by the id used in HoldingStepData.highlightElementId. Only the matching entry is shown/highlighted per step.")]
+    [Header("Info Panel UI")]
+    [SerializeField] private GameObject infoPanel;
+    [SerializeField] private TextMeshProUGUI infoText;
+
+    [Tooltip("Every highlightable element on the familiarization page, keyed by the id used in HoldingStepData.highlightElementId.")]
     [SerializeField] private List<HighlightElement> highlightElements;
 
     [Header("Sector Select Panel")]
     [SerializeField] private GameObject sectorSelectPanel;
-    [Tooltip("All three sector buttons - always visible together. Only the one matching the current step's correctSector is made interactable.")]
     [SerializeField] private Button directButton;
     public Image directImg;
     [SerializeField] private Button offsetButton;
@@ -48,10 +37,7 @@ public class HoldingUIController : MonoBehaviour
     [SerializeField] private HoldingMapIconFollower mapIconFollower;
     [SerializeField] private HoldingMapView mapView;
     [SerializeField] private HoldingTimerPopup timerPopup;
-
-    [Header("Timing Calibration")]
-    [Tooltip("Target T where the timing leg ends (start of the turn).")]
-    [SerializeField] private float timingLegEndT = 0.45f;
+    [SerializeField] private HoldingCourseKnob courseKnob;
 
     [Header("Recap Panel")]
     [SerializeField] private GameObject recapPanel;
@@ -68,9 +54,6 @@ public class HoldingUIController : MonoBehaviour
         public GameObject element;
     }
 
-    // ------------------------------------------------------------------
-    // Simulation runtime state (per current step)
-    // ------------------------------------------------------------------
     private HoldingStepData activeSimStep;
     private int nextCheckpointIndex;
 
@@ -111,13 +94,19 @@ public class HoldingUIController : MonoBehaviour
         scenarioManager.OnAllStepsComplete -= HandleAllStepsComplete;
     }
 
-    // ------------------------------------------------------------------
-    // STEP LOADED
-    // ------------------------------------------------------------------
+    // ==================================================
+    // STEP LOADING
+    // ==================================================
 
     private void HandleStepLoaded(HoldingStepData step, int index)
     {
         StopAllCoroutines();
+
+        // Leaving a step mid-knob or mid-timer must never leave anything stuck on screen.
+        if (courseKnob != null) courseKnob.Hide();
+        if (timerPopup != null) timerPopup.Hide();
+        if (hsiFeeder != null) hsiFeeder.courseOverride = false;
+
         HideAllPanels();
 
         switch (step.stepType)
@@ -125,24 +114,20 @@ public class HoldingUIController : MonoBehaviour
             case HoldingStepType.Familiarization:
                 ShowFamiliarizationStep(step);
                 break;
-
             case HoldingStepType.SectorSelect:
                 ShowSectorSelectStep(step);
                 break;
-
             case HoldingStepType.Simulation:
                 ShowSimulationStep(step);
                 break;
-
             case HoldingStepType.Recap:
                 ShowRecapStep(step);
                 break;
         }
-    }
 
-    // ------------------------------------------------------------------
-    // FAMILIARIZATION
-    // ------------------------------------------------------------------
+        // Nav state is decided once, AFTER the step is fully set up.
+        RefreshNavigation();
+    }
 
     private void ShowFamiliarizationStep(HoldingStepData step)
     {
@@ -154,63 +139,34 @@ public class HoldingUIController : MonoBehaviour
             if (entry.element != null)
                 entry.element.SetActive(entry.id == step.highlightElementId);
         }
-
-        // Gated on voiceover finishing - HandleVoiceoverComplete calls UnlockNavigation().
-        LockNavigation();
     }
-
-    // ------------------------------------------------------------------
-    // SECTOR SELECT
-    // ------------------------------------------------------------------
 
     private void ShowSectorSelectStep(HoldingStepData step)
     {
         sectorSelectPanel.SetActive(true);
 
-        // All three buttons stay visible; only the correct one is interactable.
         directButton.interactable = step.correctSector == HoldingEntryType.Direct;
         offsetButton.interactable = step.correctSector == HoldingEntryType.Offset;
         parallelButton.interactable = step.correctSector == HoldingEntryType.Parallel;
-
-        // Selecting the sector auto-advances (see HoldingScenarioManager.SelectSector), so Next
-        // is not needed on this page - keep it locked.
-        LockNavigation();
     }
 
     private void HandleSectorSelected(HoldingStepData step, HoldingEntryType sector)
     {
-        // SelectSector() already calls GoNext() itself - nothing to do here beyond
-        // any visual acknowledgement you want to add later (e.g. a brief highlight flash).
     }
-
-    // ------------------------------------------------------------------
-    // SIMULATION
-    // ------------------------------------------------------------------
-
-    // Inside HoldingUIController.cs -> ShowSimulationStep()
-    // Inside HoldingUIController.cs
 
     private void ShowSimulationStep(HoldingStepData step)
     {
         simulationPanel.SetActive(true);
-        LockNavigation();
 
         activeSimStep = step;
         nextCheckpointIndex = 0;
 
+        UpdateInfoPanel(step);
+
         SplineContainer activeWorldSpline = ResolveSceneSpline(step.worldSpline);
         SplineContainer activeUiSpline = ResolveSceneSpline(step.uiSpline);
 
-        if (aircraftMover != null && activeWorldSpline != null)
-        {
-            // Start flight at smooth cruise speed for turns
-            aircraftMover.speed = step.defaultCruiseSpeed;
-            aircraftMover.SetSpline(activeWorldSpline);
-            aircraftMover.Play();
-        }
-
-        if (mapIconFollower != null && activeUiSpline != null)
-            mapIconFollower.SetUiSpline(activeUiSpline);
+        bool alreadyCompleted = scenarioManager.IsCompleted(scenarioManager.CurrentIndex);
 
         if (hsiFeeder != null)
         {
@@ -219,29 +175,117 @@ public class HoldingUIController : MonoBehaviour
             hsiFeeder.ResetFixCrossing();
         }
 
-        // Inside HoldingUIController.cs -> ShowSimulationStep()
-        // Inside HoldingUIController.cs -> ShowSimulationStep()
+        if (aircraftMover != null && activeWorldSpline != null)
+        {
+            aircraftMover.speed = step.defaultCruiseSpeed;
+            aircraftMover.SetSpline(activeWorldSpline);
+
+            if (alreadyCompleted)
+            {
+                // Revisit: no flight, no knob, no timer. Park the aircraft at the end.
+                aircraftMover.Pause();
+                aircraftMover.SeekToNormalized(1f);
+            }
+            else
+            {
+                aircraftMover.Play();
+            }
+        }
+
+        if (mapIconFollower != null && activeUiSpline != null)
+            mapIconFollower.SetUiSpline(activeUiSpline);
 
         if (mapView != null)
         {
             mapView.ClearEntryPath();
-            // FIX: Pass activeUiSpline so it evaluates the spline on the Map panel
             if (step.showDottedEntryPath && activeUiSpline != null)
                 mapView.ShowEntryPath(activeUiSpline, step.entryPathEndT);
         }
 
-        StartCoroutine(WatchSimulationCheckpoints());
+        // Only watch checkpoints on a fresh run. On revisit nothing should trigger.
+        if (!alreadyCompleted)
+            StartCoroutine(WatchSimulationCheckpoints());
     }
+
+    private void ShowRecapStep(HoldingStepData step)
+    {
+        recapPanel.SetActive(true);
+        recapText.text = step.recapText;
+    }
+
+    private void UpdateInfoPanel(HoldingStepData step)
+    {
+        if (infoPanel == null) return;
+
+        bool shouldShow = step != null && step.showInfoPanel;
+        infoPanel.SetActive(shouldShow);
+
+        if (shouldShow && infoText != null)
+            infoText.text = step.infoPanelText;
+    }
+
+    // ==================================================
+    // SIMULATION FLOW
+    //
+    // At every checkpoint:
+    //   1. aircraft pauses
+    //   2. course knob appears (HSI frozen except the course pointer)
+    //   3. user sets the course and presses Set
+    //   4. Start Timer popup appears
+    //   5. user presses Start Timer -> aircraft flies the leg while the countdown runs
+    // ==================================================
 
     private void HandleCheckpointReached(int checkpointIndex)
     {
         if (aircraftMover != null)
             aircraftMover.Pause();
 
-        if (timerPopup != null && activeSimStep != null)
+        if (activeSimStep == null ||
+            activeSimStep.checkpoints == null ||
+            checkpointIndex < 0 ||
+            checkpointIndex >= activeSimStep.checkpoints.Length)
         {
-            timerPopup.simulatedDuration = activeSimStep.simulatedTimerDuration;
-            timerPopup.Show(OnTimerStarted, OnCheckpointTimerFinished);
+            Debug.LogWarning($"HoldingUIController: no checkpoint data for index {checkpointIndex}.");
+            OnTimerStarted();
+            return;
+        }
+
+        HoldingCheckpoint checkpoint = activeSimStep.checkpoints[checkpointIndex];
+
+        if (courseKnob != null)
+        {
+            // Freeze the HSI: feeder stops updating everything, knob only drives the course pointer.
+            if (hsiFeeder != null)
+                hsiFeeder.courseOverride = true;
+
+            courseKnob.Show(checkpoint.requiredCourse, OnCourseSet);
+        }
+        else
+        {
+            ShowTimerPopup();
+        }
+    }
+
+    private void OnCourseSet()
+    {
+        // Hand the HSI back to the feeder, then show the timer popup.
+        if (hsiFeeder != null)
+            hsiFeeder.courseOverride = false;
+
+        ShowTimerPopup();
+    }
+
+    private void ShowTimerPopup()
+    {
+        HoldingCheckpoint? checkpoint = GetCheckpoint(nextCheckpointIndex);
+
+        if (timerPopup != null && checkpoint.HasValue)
+        {
+            timerPopup.Show(
+                checkpoint.Value.timerMinutes,
+                checkpoint.Value.simulatedDuration,
+                OnTimerStarted,
+                OnCheckpointTimerFinished);
         }
         else
         {
@@ -249,20 +293,20 @@ public class HoldingUIController : MonoBehaviour
         }
     }
 
-    // Inside HoldingUIController.cs
     private void OnTimerStarted()
     {
         int currentLeg = nextCheckpointIndex;
         nextCheckpointIndex++;
 
+        HoldingCheckpoint? checkpoint = GetCheckpoint(currentLeg);
+
         if (aircraftMover != null && activeSimStep != null)
         {
-            if (activeSimStep.timingLegEndT != null && currentLeg < activeSimStep.timingLegEndT.Length)
+            if (checkpoint.HasValue)
             {
-                float targetEndT = activeSimStep.timingLegEndT[currentLeg];
+                float targetEndT = checkpoint.Value.legEndT;
                 float currentT = aircraftMover.NormalizedT;
 
-                // Handle closed-loop wrap (if starting near 0.99/0.00)
                 float deltaT = targetEndT - currentT;
                 if (deltaT < 0f && currentT > 0.9f)
                     deltaT += 1.0f;
@@ -273,8 +317,8 @@ public class HoldingUIController : MonoBehaviour
                 float totalLength = SplineUtility.CalculateLength(spline.Spline, spline.transform.localToWorldMatrix);
                 float legDistance = deltaT * totalLength;
 
-                // Calculates the exact speed to reach targetEndT right at 00:00
-                aircraftMover.speed = legDistance / activeSimStep.simulatedTimerDuration;
+                // Auto-calculated leg speed: arrives at legEndT exactly as the countdown hits 00:00.
+                aircraftMover.speed = legDistance / checkpoint.Value.simulatedDuration;
             }
 
             aircraftMover.Play();
@@ -285,46 +329,53 @@ public class HoldingUIController : MonoBehaviour
 
     private void OnCheckpointTimerFinished()
     {
-        // Timer reached 00:00: return to normal cruise speed for the curved turn
         if (aircraftMover != null && activeSimStep != null)
-        {
             aircraftMover.speed = activeSimStep.defaultCruiseSpeed;
-        }
     }
 
-    // Helper: Finds the active scene GameObject that shares the prefab's name
+    private HoldingCheckpoint? GetCheckpoint(int index)
+    {
+        if (activeSimStep == null || activeSimStep.checkpoints == null)
+            return null;
+
+        if (index < 0 || index >= activeSimStep.checkpoints.Length)
+            return null;
+
+        return activeSimStep.checkpoints[index];
+    }
+
     private SplineContainer ResolveSceneSpline(SplineContainer prefabOrSceneSpline)
     {
         if (prefabOrSceneSpline == null) return null;
 
-        // If already a scene object, return it directly
         if (prefabOrSceneSpline.gameObject.scene.IsValid())
             return prefabOrSceneSpline;
 
-        // If it's a prefab asset from the Project tab, find the active instance in the Hierarchy
         GameObject sceneObj = GameObject.Find(prefabOrSceneSpline.name);
         if (sceneObj != null && sceneObj.TryGetComponent(out SplineContainer sceneSpline))
-        {
             return sceneSpline;
-        }
 
         return prefabOrSceneSpline;
     }
 
     private IEnumerator WatchSimulationCheckpoints()
     {
+        Debug.Log($"Watching. checkpoints={(activeSimStep.checkpoints == null ? -1 : activeSimStep.checkpoints.Length)} next={nextCheckpointIndex}");
         while (activeSimStep != null)
         {
             if (aircraftMover == null)
                 yield break;
 
-            if (nextCheckpointIndex < activeSimStep.pauseAtProgressT.Length)
+            HoldingCheckpoint[] checkpoints = activeSimStep.checkpoints;
+            int count = checkpoints != null ? checkpoints.Length : 0;
+
+            if (nextCheckpointIndex < count)
             {
-                float target = activeSimStep.pauseAtProgressT[nextCheckpointIndex];
+                float target = checkpoints[nextCheckpointIndex].pauseAtT;
                 if (aircraftMover.NormalizedT >= target)
                 {
                     scenarioManager.NotifyCheckpointReached(nextCheckpointIndex);
-                    yield break; // HandleCheckpointReached restarts this loop after the timer
+                    yield break;
                 }
             }
             else if (aircraftMover.ReachedEnd)
@@ -339,64 +390,54 @@ public class HoldingUIController : MonoBehaviour
 
     private void HandleSimulationStepComplete()
     {
-        UnlockNavigation();
+        RefreshNavigation();
     }
-
-
-    // ------------------------------------------------------------------
-    // RECAP
-    // ------------------------------------------------------------------
-
-    private void ShowRecapStep(HoldingStepData step)
-    {
-        recapPanel.SetActive(true);
-        recapText.text = step.recapText;
-        UnlockNavigation();
-    }
-
-    // ------------------------------------------------------------------
-    // VOICEOVER
-    // ------------------------------------------------------------------
 
     private void HandleVoiceoverComplete()
     {
-        UnlockNavigation();
+        RefreshNavigation();
     }
-
-    // ------------------------------------------------------------------
-    // FINISH
-    // ------------------------------------------------------------------
 
     private void HandleAllStepsComplete()
     {
         Debug.Log("Holding Procedures training complete.");
     }
 
-    // ------------------------------------------------------------------
-    // HELPERS
-    // ------------------------------------------------------------------
+    // ==================================================
+    // NAVIGATION
+    // ==================================================
 
-    private void LockNavigation()
-    {
-        nextButton.interactable = false;
-        previousButton.interactable = false;
-    }
-
-    /// <summary>Single gatekeeper for turning Next/Previous back on - mirrors ATC's UIController.UnlockNavigation(). Always call this instead of setting the buttons directly.</summary>
-    private void UnlockNavigation()
+    // Next: gated by the step's own completion rule.
+    // Previous: enabled on every step except the first, but locked while a fresh sim is running.
+    private void RefreshNavigation()
     {
         HoldingStepData current = scenarioManager.CurrentStep;
         if (current == null)
             return;
 
-        bool requiresCompletion =
-            current.stepType == HoldingStepType.SectorSelect ||
-            current.stepType == HoldingStepType.Simulation;
+        int index = scenarioManager.CurrentIndex;
+        bool allowNext;
+        bool allowPrevious = index > 0;
 
-        bool allowNext = !requiresCompletion || scenarioManager.IsCompleted(scenarioManager.CurrentIndex);
+        switch (current.stepType)
+        {
+            case HoldingStepType.SectorSelect:
+                allowNext = scenarioManager.IsCompleted(index);
+                break;
+
+            case HoldingStepType.Simulation:
+                allowNext = scenarioManager.IsCompleted(index);
+                if (!allowNext)
+                    allowPrevious = false;
+                break;
+
+            default: // Familiarization, Recap
+                allowNext = scenarioManager.VoiceoverPlayed(index);
+                break;
+        }
 
         nextButton.interactable = allowNext;
-        previousButton.interactable = scenarioManager.CurrentIndex > 0;
+        previousButton.interactable = allowPrevious;
     }
 
     private void HideAllPanels()
@@ -405,6 +446,9 @@ public class HoldingUIController : MonoBehaviour
         sectorSelectPanel.SetActive(false);
         simulationPanel.SetActive(false);
         recapPanel.SetActive(false);
+
+        if (infoPanel != null)
+            infoPanel.SetActive(false);
 
         activeSimStep = null;
     }
