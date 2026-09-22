@@ -14,15 +14,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HoldingStepData
   stepId: 
   stepType: 1
-  highlightElementId: 
+  highlightElementId: 001
   familiarizationLabel: 
+  showInfoPanel: 1
+  infoPanelText: Select Parallel to continue with the exprement
   correctSector: 2
   worldSpline: {fileID: 0}
   uiSpline: {fileID: 0}
   showDottedEntryPath: 0
+  entryPathEndT: 0.4
   approachCourse: 130
   holdingInboundCourse: 270
-  pauseAtProgressT: []
-  simulatedTimerDuration: 4
+  defaultCruiseSpeed: 35
+  checkpoints: []
+  parallelAudios: []
   recapText: 
   voiceover: {fileID: 0}

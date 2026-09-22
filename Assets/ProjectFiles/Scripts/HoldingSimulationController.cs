@@ -1,14 +1,19 @@
 // HoldingSimulationController.cs
 //
 // Owns everything that happens during a Simulation step: flying the aircraft, pausing at
-// checkpoints, the course knob, the Start Timer popup, per-leg speed, and all simulation audio.
-// HoldingUIController only tells it "a simulation step started" / "stop".
+// checkpoints, the course knob, the Start Timer popup, per-leg speed, all simulation audio, and
+// the info-panel text tied to the same beats. HoldingUIController only tells it "a simulation
+// step started" / "stop", and listens to OnInfoTextChanged to drive the panel.
 //
 // At a checkpoint the flow depends on its mode:
-//   KnobThenTimer : pause -> pause audio -> knob -> correct panel -> post-knob audio -> timer -> fly leg
-//   KnobOnly      : pause -> pause audio -> knob -> correct panel -> fly on at cruise speed
-//   TimerOnly     : pause -> pause audio -> timer -> fly leg
+//   KnobThenTimer : pause -> pause audio/text -> knob (+text) -> correct panel -> post-knob audio
+//                   -> timer (+text) -> fly leg -> [text hidden once countdown finishes]
+//   KnobOnly      : pause -> pause audio/text -> knob (+text) -> correct panel
+//                   -> fly on at cruise speed -> [text hidden immediately]
+//   TimerOnly     : pause -> pause audio/text -> timer (+text) -> fly leg
+//                   -> [text hidden once countdown finishes]
 
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -32,6 +37,9 @@ public class HoldingSimulationController : MonoBehaviour
     [Tooltip("Plays parallel audio while the aircraft flies. Never blocks anything.")]
     [SerializeField] private AudioSource parallelAudioSource;
 
+    /// <summary>Fired whenever the info panel text should change. Null/empty means "hide the panel".</summary>
+    public event Action<string> OnInfoTextChanged;
+
     private HoldingStepData activeStep;
     private int nextCheckpointIndex;
     private int nextParallelAudioIndex;
@@ -52,6 +60,9 @@ public class HoldingSimulationController : MonoBehaviour
         activeStep = step;
         nextCheckpointIndex = 0;
         nextParallelAudioIndex = 0;
+
+        if (!alreadyCompleted)
+            OnInfoTextChanged?.Invoke(step.stepStartInfoText);
 
         SplineContainer worldSpline = ResolveSceneSpline(step.worldSpline);
         SplineContainer uiSpline = ResolveSceneSpline(step.uiSpline);
@@ -169,6 +180,8 @@ public class HoldingSimulationController : MonoBehaviour
         aircraftMover.Pause();
         scenarioManager.NotifyCheckpointReached(index);
 
+        OnInfoTextChanged?.Invoke(cp.pauseInfoText);
+
         // 1. Pause audio: everything waits until it finishes.
         yield return PlayBlocking(cp.pauseAudio);
 
@@ -180,7 +193,9 @@ public class HoldingSimulationController : MonoBehaviour
             float submittedCourse = 0f;
 
             if (hsiFeeder != null)
-                hsiFeeder.courseOverride = true;   // freeze the whole HSI, knob drives only the course pointer
+                hsiFeeder.courseOverride = true;
+
+            OnInfoTextChanged?.Invoke(cp.knobInfoText);
 
             courseKnob.Show(cp.requiredCourse, submitted =>
             {
@@ -193,11 +208,10 @@ public class HoldingSimulationController : MonoBehaviour
 
             if (hsiFeeder != null)
             {
-                hsiFeeder.HoldCourse(submittedCourse);  // keep the user's course on the pointer
-                hsiFeeder.courseOverride = false;       // unfreeze the rest of the HSI
+                hsiFeeder.HoldCourse(submittedCourse);
+                hsiFeeder.courseOverride = false;
             }
 
-            // 3. Post-knob audio (only when a timer follows).
             if (cp.mode == HoldingCheckpointMode.KnobThenTimer)
                 yield return PlayBlocking(cp.postKnobAudio);
         }
@@ -206,6 +220,7 @@ public class HoldingSimulationController : MonoBehaviour
         if (cp.mode == HoldingCheckpointMode.KnobOnly)
         {
             aircraftMover.speed = activeStep.defaultCruiseSpeed;
+            OnInfoTextChanged?.Invoke(null);
         }
         else
         {
@@ -214,10 +229,16 @@ public class HoldingSimulationController : MonoBehaviour
 
             if (timerPopup != null)
             {
+                OnInfoTextChanged?.Invoke(cp.timerInfoText);
+
                 timerPopup.Show(
                     cp.timerMinutes,
                     cp.simulatedDuration,
-                    () => timerStarted = true,
+                    () =>
+                    {
+                        timerStarted = true;
+                        OnInfoTextChanged?.Invoke(null); // Start Timer pressed, hide immediately
+                    },
                     () => timerFinished = true);
 
                 while (!timerStarted)
@@ -226,8 +247,6 @@ public class HoldingSimulationController : MonoBehaviour
 
             ApplyLegSpeed(cp);
 
-            // Aircraft flies the timed leg while the countdown runs; the watcher resumes below,
-            // so parallel audio and the next checkpoint keep working during the leg.
             aircraftMover.Play();
             nextCheckpointIndex = index + 1;
             checkpointRoutine = null;
@@ -242,7 +261,7 @@ public class HoldingSimulationController : MonoBehaviour
     }
 
     // Same as FlightWatcher, but restores cruise speed once the countdown has finished.
-    private IEnumerator FlightWatcherAfterLeg(System.Func<bool> timerFinished)
+    private IEnumerator FlightWatcherAfterLeg(Func<bool> timerFinished)
     {
         bool speedRestored = false;
 
@@ -252,6 +271,7 @@ public class HoldingSimulationController : MonoBehaviour
             {
                 aircraftMover.speed = activeStep.defaultCruiseSpeed;
                 speedRestored = true;
+                OnInfoTextChanged?.Invoke(null); // countdown done, back to just flying
             }
 
             float t = aircraftMover.NormalizedT;

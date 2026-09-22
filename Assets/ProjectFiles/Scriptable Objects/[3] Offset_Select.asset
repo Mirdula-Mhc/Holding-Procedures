@@ -16,13 +16,17 @@ MonoBehaviour:
   stepType: 1
   highlightElementId: 
   familiarizationLabel: 
+  showInfoPanel: 1
+  infoPanelText: Select Offset to continue with the exprement
   correctSector: 1
   worldSpline: {fileID: 0}
   uiSpline: {fileID: 0}
   showDottedEntryPath: 0
+  entryPathEndT: 0.4
   approachCourse: 60
   holdingInboundCourse: 270
-  pauseAtProgressT: []
-  simulatedTimerDuration: 4
+  defaultCruiseSpeed: 35
+  checkpoints: []
+  parallelAudios: []
   recapText: 
   voiceover: {fileID: 0}

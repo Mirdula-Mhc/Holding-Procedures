@@ -29,27 +29,42 @@ public enum HoldingCheckpointMode
 [System.Serializable]
 public struct HoldingCheckpoint
 {
+   
     [Tooltip("What appears at this pause.")]
     public HoldingCheckpointMode mode;
+
+    [Header("Text to show when the aircraft pauses")]
+    [Tooltip("Info panel text shown as soon as the aircraft pauses here, same moment as Pause Audio.")]
+    public string pauseInfoText;
 
     [Tooltip("Normalized spline T where the aircraft pauses. This is also where the timing leg starts.")]
     public float pauseAtT;
 
+    [Tooltip("Normalized spline T where the timing leg ends. Ignored for KnobOnly.")]
+    public float legEndT;
+
+    [Header("Info Text to show while changing knob value")]
+    [Tooltip("Info panel text shown while the knob is up. Ignored for TimerOnly.")]
+    public string knobInfoText;
+
     [Tooltip("Course (degrees) the user must dial on the knob. Must match exactly. Ignored for TimerOnly.")]
     public float requiredCourse;
+
+    [Header("Info Text to Show when the start timer button appears")]
+    [Tooltip("Info panel text shown once the Start Timer button/timer is running. Ignored for KnobOnly.")]
+    public string timerInfoText;
 
     [Tooltip("Timer length shown in the popup, in minutes (1 or 2). Display only. Ignored for KnobOnly.")]
     public int timerMinutes;
 
-    [Tooltip("Normalized spline T where the timing leg ends. Ignored for KnobOnly.")]
-    public float legEndT;
-
     [Tooltip("Real seconds the countdown takes. Leg speed is auto-calculated from this and the distance to legEndT. Ignored for KnobOnly.")]
     public float simulatedDuration;
 
+    [Header("Audio to play as soon as the aircraft pauses")]
     [Tooltip("Plays as soon as the aircraft pauses. The aircraft (and knob/timer) wait until it finishes. Optional.")]
     public AudioClip pauseAudio;
 
+    [Header("Audio to play between Knob and start timer")]
     [Tooltip("Plays after the 'correct' panel, before the Start Timer button appears. Only used in KnobThenTimer. Optional.")]
     public AudioClip postKnobAudio;
 }
@@ -113,6 +128,10 @@ public class HoldingStepData : ScriptableObject
     [Header("Simulation - Speed")]
     [Tooltip("Aircraft speed between timing legs. Leg speeds are auto-calculated per checkpoint.")]
     public float defaultCruiseSpeed = 35f;
+
+    [Header("Info Text to Show on start of Simulation ")]
+    [Tooltip("Info panel text shown as the aircraft starts flying at the beginning of this step.")]
+    public string stepStartInfoText;
 
     [Header("Simulation - Checkpoints")]
     [Tooltip("One entry per pause point, in the order the aircraft reaches them.")]

@@ -70,6 +70,9 @@ public class HoldingUIController : MonoBehaviour
         scenarioManager.OnVoiceoverComplete += HandleVoiceoverComplete;
         scenarioManager.OnSimulationStepComplete += HandleSimulationStepComplete;
         scenarioManager.OnAllStepsComplete += HandleAllStepsComplete;
+
+        if (simulationController != null)
+            simulationController.OnInfoTextChanged += HandleInfoTextChanged;
     }
 
     private void OnDisable()
@@ -78,6 +81,9 @@ public class HoldingUIController : MonoBehaviour
         scenarioManager.OnVoiceoverComplete -= HandleVoiceoverComplete;
         scenarioManager.OnSimulationStepComplete -= HandleSimulationStepComplete;
         scenarioManager.OnAllStepsComplete -= HandleAllStepsComplete;
+
+        if (simulationController != null)
+            simulationController.OnInfoTextChanged -= HandleInfoTextChanged;
     }
 
     // ==================================================
@@ -86,7 +92,6 @@ public class HoldingUIController : MonoBehaviour
 
     private void HandleStepLoaded(HoldingStepData step, int index)
     {
-        // Leaving any step must stop the simulation, its audio, knob and timer.
         if (simulationController != null)
             simulationController.StopEverything();
 
@@ -107,6 +112,11 @@ public class HoldingUIController : MonoBehaviour
                 ShowRecapStep(step);
                 break;
         }
+
+        // Simulation steps get their info-panel state from the four beats above (via
+        // HandleInfoTextChanged). Every other step type uses the plain per-step text/flag.
+        if (step.stepType != HoldingStepType.Simulation)
+            UpdateInfoPanel(step);
 
         RefreshNavigation();
     }
@@ -135,7 +145,6 @@ public class HoldingUIController : MonoBehaviour
     private void ShowSimulationStep(HoldingStepData step, int index)
     {
         simulationPanel.SetActive(true);
-        UpdateInfoPanel(step);
 
         bool alreadyCompleted = scenarioManager.IsCompleted(index);
 
@@ -225,5 +234,27 @@ public class HoldingUIController : MonoBehaviour
 
         if (infoPanel != null)
             infoPanel.SetActive(false);
+    }
+
+    // Called by HoldingSimulationController at each beat (step start, pause, knob, timer, done).
+    // Null means "hide the panel", a non-empty string updates the text and shows the panel
+    // (only if this step actually has Show Info Panel enabled).
+    private void HandleInfoTextChanged(string text)
+    {
+        if (infoPanel == null)
+            return;
+
+        HoldingStepData current = scenarioManager.CurrentStep;
+        bool stepAllowsPanel = current != null && current.showInfoPanel;
+
+        if (string.IsNullOrEmpty(text) || !stepAllowsPanel)
+        {
+            infoPanel.SetActive(false);
+            return;
+        }
+
+        infoPanel.SetActive(true);
+        if (infoText != null)
+            infoText.text = text;
     }
 }

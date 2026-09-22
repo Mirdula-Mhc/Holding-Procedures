@@ -16,7 +16,7 @@ MonoBehaviour:
   stepType: 2
   highlightElementId: 
   familiarizationLabel: 
-  showInfoPanel: 0
+  showInfoPanel: 1
   infoPanelText: 
   correctSector: 2
   worldSpline: {fileID: 2794321006748533891, guid: 054d38ad6e5c3f243aa01694c055060e, type: 3}
@@ -25,38 +25,54 @@ MonoBehaviour:
   entryPathEndT: 0.3753
   approachCourse: 130
   holdingInboundCourse: 270
-  defaultCruiseSpeed: 5
+  defaultCruiseSpeed: 4
+  stepStartInfoText: 'The aircraft is currently heading twords the fix '
   checkpoints:
   - mode: 0
+    pauseInfoText: 
     pauseAtT: 0.085
+    legEndT: 0.18
+    knobInfoText: 'Set the required course value by rotating the knob and then press
+      check '
     requiredCourse: 90
+    timerInfoText: Press start timer to remuse the simulation
     timerMinutes: 1
-    legEndT: 0.2514
-    simulatedDuration: 30
+    simulatedDuration: 25
     pauseAudio: {fileID: 0}
     postKnobAudio: {fileID: 0}
   - mode: 1
-    pauseAtT: 0.2514
-    requiredCourse: 247
-    timerMinutes: 0
+    pauseInfoText: 
+    pauseAtT: 0.318
     legEndT: 0
+    knobInfoText: Set the required course value by rotating the knob and then press
+      check
+    requiredCourse: 247
+    timerInfoText: 
+    timerMinutes: 0
     simulatedDuration: 0
     pauseAudio: {fileID: 0}
     postKnobAudio: {fileID: 0}
   - mode: 1
-    pauseAtT: 0.318
-    requiredCourse: 270
-    timerMinutes: 0
+    pauseInfoText: 
+    pauseAtT: 0.4476
     legEndT: 0
+    knobInfoText: Set the required course value by rotating the knob and then press
+      check
+    requiredCourse: 270
+    timerInfoText: 
+    timerMinutes: 0
     simulatedDuration: 0
     pauseAudio: {fileID: 0}
     postKnobAudio: {fileID: 0}
   - mode: 2
+    pauseInfoText: 
     pauseAtT: 0.5808
-    requiredCourse: 90
-    timerMinutes: 1
     legEndT: 0.7461
-    simulatedDuration: 30
+    knobInfoText: 
+    requiredCourse: 90
+    timerInfoText: Press start timer to remuse the simulation
+    timerMinutes: 1
+    simulatedDuration: 25
     pauseAudio: {fileID: 0}
     postKnobAudio: {fileID: 0}
   parallelAudios: []
