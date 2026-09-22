@@ -48,6 +48,7 @@ public class HoldingSimulationController : MonoBehaviour
     private Coroutine flightRoutine;
     private Coroutine checkpointRoutine;
 
+    
     // ==================================================
     // PUBLIC
     // ==================================================
@@ -383,4 +384,5 @@ public class HoldingSimulationController : MonoBehaviour
 
         return prefabOrSceneSpline;
     }
+
 }

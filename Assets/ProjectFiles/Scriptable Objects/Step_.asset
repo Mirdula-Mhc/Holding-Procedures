@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7e439994ed88f804590d9856a3b528a0, type: 3}
+  m_Name: Step_
+  m_EditorClassIdentifier: Assembly-CSharp::HoldingStepData
+  stepId: 
+  stepType: 0
+  highlightElementId: 
+  familiarizationLabel: 
+  showInfoPanel: 0
+  infoPanelText: 
+  highlightSequence:
+  - id: 
+    title: 
+    bodyText: 
+    explanationAudio: {fileID: 0}
+  correctSector: 0
+  worldSpline: {fileID: 0}
+  uiSpline: {fileID: 0}
+  showDottedEntryPath: 1
+  entryPathEndT: 0.4
+  approachCourse: 330
+  holdingInboundCourse: 270
+  defaultCruiseSpeed: 35
+  stepStartInfoText: 
+  checkpoints: []
+  parallelAudios: []
+  recapText: 
+  voiceover: {fileID: 0}

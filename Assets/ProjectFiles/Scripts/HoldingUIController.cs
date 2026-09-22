@@ -8,6 +8,7 @@ public class HoldingUIController : MonoBehaviour
     [Header("References")]
     [SerializeField] private HoldingScenarioManager scenarioManager;
     [SerializeField] private HoldingSimulationController simulationController;
+    [SerializeField] private HoldingFamiliarizationController familiarizationController;
 
     [Header("Familiarization Panel")]
     [SerializeField] private GameObject familiarizationPanel;
@@ -39,6 +40,9 @@ public class HoldingUIController : MonoBehaviour
     [Header("Navigation")]
     [SerializeField] private Button nextButton;
     [SerializeField] private Button previousButton;
+
+
+    private bool guidedSequenceDone;
 
     [System.Serializable]
     public struct HighlightElement
@@ -73,6 +77,9 @@ public class HoldingUIController : MonoBehaviour
 
         if (simulationController != null)
             simulationController.OnInfoTextChanged += HandleInfoTextChanged;
+
+        if (familiarizationController != null)
+            familiarizationController.OnSequenceComplete += HandleGuidedSequenceComplete;
     }
 
     private void OnDisable()
@@ -84,6 +91,9 @@ public class HoldingUIController : MonoBehaviour
 
         if (simulationController != null)
             simulationController.OnInfoTextChanged -= HandleInfoTextChanged;
+
+        if (familiarizationController != null)
+            familiarizationController.OnSequenceComplete -= HandleGuidedSequenceComplete;
     }
 
     // ==================================================
@@ -94,6 +104,9 @@ public class HoldingUIController : MonoBehaviour
     {
         if (simulationController != null)
             simulationController.StopEverything();
+
+        if (familiarizationController != null)
+            familiarizationController.StopSequence();
 
         HideAllPanels();
 
@@ -124,15 +137,11 @@ public class HoldingUIController : MonoBehaviour
     private void ShowFamiliarizationStep(HoldingStepData step)
     {
         familiarizationPanel.SetActive(true);
-        familiarizationLabelText.text = step.familiarizationLabel;
+        guidedSequenceDone = step.highlightSequence == null || step.highlightSequence.Length == 0;
 
-        foreach (HighlightElement entry in highlightElements)
-        {
-            if (entry.element != null)
-                entry.element.SetActive(entry.id == step.highlightElementId);
-        }
+        if (familiarizationController != null && !guidedSequenceDone)
+            familiarizationController.BeginSequence(step.highlightSequence);
     }
-
     private void ShowSectorSelectStep(HoldingStepData step)
     {
         sectorSelectPanel.SetActive(true);
@@ -216,7 +225,11 @@ public class HoldingUIController : MonoBehaviour
                     allowPrevious = false;
                 break;
 
-            default: // Familiarization, Recap
+            case HoldingStepType.Familiarization:
+                allowNext = guidedSequenceDone;
+                break;
+
+            default: // Recap
                 allowNext = scenarioManager.VoiceoverPlayed(index);
                 break;
         }
@@ -256,5 +269,11 @@ public class HoldingUIController : MonoBehaviour
         infoPanel.SetActive(true);
         if (infoText != null)
             infoText.text = text;
+    }
+
+    private void HandleGuidedSequenceComplete()
+    {
+        guidedSequenceDone = true;
+        RefreshNavigation();
     }
 }

@@ -78,6 +78,20 @@ public struct HoldingParallelAudio
     public AudioClip clip;
 }
 
+[System.Serializable]
+public struct HoldingHighlightPart
+{
+    [Tooltip("Matches this part to a scene entry in HoldingFamiliarizationController's Highlightable Parts list.")]
+    public string id;
+
+    public string title;
+
+    [TextArea(2, 5)]
+    public string bodyText;
+
+    public AudioClip explanationAudio;
+}
+
 [CreateAssetMenu(fileName = "Step_", menuName = "A320/Holding Step Data")]
 public class HoldingStepData : ScriptableObject
 {
@@ -100,6 +114,10 @@ public class HoldingStepData : ScriptableObject
 
     [TextArea(3, 6)]
     public string infoPanelText;
+
+    [Header("Familiarization - Guided Highlight Sequence")]
+    [Tooltip("Ordered list of parts to highlight one at a time. Empty = this step doesn't use the guided sequence.")]
+    public HoldingHighlightPart[] highlightSequence;
 
     // ------------------------------------------------------------------
     // SECTOR SELECT
