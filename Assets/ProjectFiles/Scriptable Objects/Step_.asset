@@ -16,21 +16,36 @@ MonoBehaviour:
   stepType: 0
   highlightElementId: 
   familiarizationLabel: 
-  showInfoPanel: 0
+  familiarizationPage: 0
+  showInfoPanel: 1
   infoPanelText: 
   highlightSequence:
-  - id: 
-    title: 
-    bodyText: 
+  - id: M_002
+    title: Air craft
+    bodyText: Indicates aircraft
+    explanationAudio: {fileID: 0}
+  - id: M_003
+    title: Fix
+    bodyText: 'Fix '
+    explanationAudio: {fileID: 0}
+  - id: M_004
+    title: Out Bound
+    bodyText: Out bound is 90
+    explanationAudio: {fileID: 0}
+  - id: M_005
+    title: In Bound
+    bodyText: 'In bound is 270
+
+'
     explanationAudio: {fileID: 0}
   correctSector: 0
   worldSpline: {fileID: 0}
   uiSpline: {fileID: 0}
-  showDottedEntryPath: 1
-  entryPathEndT: 0.4
-  approachCourse: 330
-  holdingInboundCourse: 270
-  defaultCruiseSpeed: 35
+  showDottedEntryPath: 0
+  entryPathEndT: 0
+  approachCourse: 0
+  holdingInboundCourse: 0
+  defaultCruiseSpeed: 0
   stepStartInfoText: 
   checkpoints: []
   parallelAudios: []

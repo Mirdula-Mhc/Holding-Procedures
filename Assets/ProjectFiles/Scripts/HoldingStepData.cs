@@ -18,6 +18,13 @@ public enum HoldingStepType
 public enum HoldingEntryType { Direct, Offset, Parallel }
 
 // What appears when the aircraft pauses at a checkpoint. Knob always comes before the timer.
+
+public enum FamiliarizationPage
+{
+    Map,
+    Hsi
+}
+
 public enum HoldingCheckpointMode
 {
     KnobThenTimer,  // knob -> correct panel -> post-knob audio -> Start Timer button
@@ -29,7 +36,7 @@ public enum HoldingCheckpointMode
 [System.Serializable]
 public struct HoldingCheckpoint
 {
-   
+
     [Tooltip("What appears at this pause.")]
     public HoldingCheckpointMode mode;
 
@@ -108,6 +115,9 @@ public class HoldingStepData : ScriptableObject
 
     [TextArea(2, 4)]
     public string familiarizationLabel;
+
+    [Tooltip("Which sub-panel this step shows: Map_Panel or HSI_Panel.")]
+    public FamiliarizationPage familiarizationPage;
 
     [Header("Info / Instruction Panel")]
     public bool showInfoPanel;

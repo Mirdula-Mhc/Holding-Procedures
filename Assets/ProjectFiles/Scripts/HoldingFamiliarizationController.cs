@@ -1,8 +1,9 @@
 // HoldingFamiliarizationController.cs
 //
-// Guides the user through a map/HSI page one part at a time: highlights a part (glow + scale),
-// waits for a tap, shows an explanation panel with title/body/audio, and moves to the next part
-// once the audio finishes. Fires OnSequenceComplete after the last part.
+// Guides the user through a map/HSI page one part at a time: highlights a part in place
+// (scale pulse only, no duplicate/glow object), waits for a tap, shows an explanation panel
+// with title/body/audio, and moves to the next part once the audio finishes.
+// Fires OnSequenceComplete after the last part.
 
 using System;
 using System.Collections;
@@ -27,7 +28,7 @@ public class HoldingFamiliarizationController : MonoBehaviour
     [SerializeField] private List<HighlightableSceneElement> elements;
 
     [Header("Dim Overlay")]
-    [Tooltip("Flat semi-transparent panel covering the whole map. Sits above the background, below every highlightable element.")]
+    [Tooltip("Flat semi-transparent panel covering the whole map/HSI. Reparented under whichever panel is active.")]
     [SerializeField] private GameObject dimOverlay;
 
     [Header("Explanation Panel")]
@@ -36,14 +37,11 @@ public class HoldingFamiliarizationController : MonoBehaviour
     [SerializeField] private TextMeshProUGUI explanationBodyText;
     [SerializeField] private AudioSource explanationAudioSource;
 
-    [Header("Glow / Pulse")]
-    [Tooltip("Extra scale applied to the glow copy relative to the original element's scale.")]
-    [SerializeField] private float glowScaleMultiplier = 1.2f;
-    [SerializeField] private Color glowColor = new Color(1f, 0.9f, 0.3f, 0.6f);
+    [Header("Pulse")]
     [Tooltip("How much the highlighted element itself scales up while active.")]
     [SerializeField] private float highlightScaleMultiplier = 1.15f;
     [SerializeField] private float pulseSpeed = 2f;
-    [SerializeField] private float pulseAmount = 0.15f;
+    [SerializeField] private float pulseAmount = 0.08f;
 
     public event Action OnSequenceComplete;
 
@@ -51,7 +49,6 @@ public class HoldingFamiliarizationController : MonoBehaviour
     private int currentIndex;
     private Coroutine pulseRoutine;
     private Coroutine waitAudioRoutine;
-    private GameObject activeGlow;
     private Vector3 activeElementOriginalScale;
     private RectTransform activeElementTransform;
 
@@ -122,9 +119,17 @@ public class HoldingFamiliarizationController : MonoBehaviour
     {
         if (parts == null || currentIndex >= parts.Length)
         {
-            // Sequence finished.
+            // Sequence finished - clean up completely, nothing should linger visible.
+            ClearActiveHighlight();
+
             if (dimOverlay != null)
                 dimOverlay.SetActive(false);
+
+            foreach (var e in elements)
+            {
+                if (e.tapButton != null)
+                    e.tapButton.interactable = false;
+            }
 
             OnSequenceComplete?.Invoke();
             return;
@@ -161,7 +166,6 @@ public class HoldingFamiliarizationController : MonoBehaviour
 
     private void OnElementTapped(HoldingHighlightPart part)
     {
-        // Stop the pulse and prevent re-tapping while the explanation is up.
         if (pulseRoutine != null) { StopCoroutine(pulseRoutine); pulseRoutine = null; }
 
         int elementIndex = FindElement(part.id);
@@ -200,7 +204,6 @@ public class HoldingFamiliarizationController : MonoBehaviour
         }
         else
         {
-            // No clip assigned - don't block testing, give a short beat so the panel is readable.
             yield return new WaitForSeconds(1.5f);
         }
 
@@ -216,7 +219,7 @@ public class HoldingFamiliarizationController : MonoBehaviour
     }
 
     // ==================================================
-    // HIGHLIGHT / GLOW
+    // HIGHLIGHT (scale pulse only, in place, no duplicate object)
     // ==================================================
 
     private void ShowHighlight(HighlightableSceneElement element)
@@ -229,51 +232,29 @@ public class HoldingFamiliarizationController : MonoBehaviour
         if (dimOverlay != null && element.visual.parent != null)
         {
             dimOverlay.transform.SetParent(element.visual.parent, false);
-            dimOverlay.transform.SetAsFirstSibling(); // bottom of this panel, above the plain background
+            dimOverlay.transform.SetAsFirstSibling();
         }
 
         activeElementTransform = element.visual;
         activeElementOriginalScale = element.visual.localScale;
-        element.visual.localScale = activeElementOriginalScale * highlightScaleMultiplier;
 
+        // Render this element above everything else in its own parent.
         element.visual.SetAsLastSibling();
-        // Glow copy: same sprite, tinted, larger, placed directly behind the element.
-        if (element.visualImage != null)
-        {
-            activeGlow = new GameObject($"{element.id}_Glow", typeof(RectTransform), typeof(Image));
-            activeGlow.transform.SetParent(element.visual.parent, false);
 
-            RectTransform glowRt = activeGlow.GetComponent<RectTransform>();
-            glowRt.anchorMin = element.visual.anchorMin;
-            glowRt.anchorMax = element.visual.anchorMax;
-            glowRt.pivot = element.visual.pivot;
-            glowRt.anchoredPosition = element.visual.anchoredPosition;
-            glowRt.sizeDelta = element.visual.sizeDelta;
-            glowRt.localScale = activeElementOriginalScale * glowScaleMultiplier;
-
-            Image glowImg = activeGlow.GetComponent<Image>();
-            glowImg.sprite = element.visualImage.sprite;
-            glowImg.color = glowColor;
-            glowImg.raycastTarget = false;
-
-            // Behind the element, but still above the dim overlay/background.
-            activeGlow.transform.SetSiblingIndex(element.visual.GetSiblingIndex());
-        }
-
-        pulseRoutine = StartCoroutine(PulseGlow());
+        pulseRoutine = StartCoroutine(PulseElement());
     }
 
-    private IEnumerator PulseGlow()
+    private IEnumerator PulseElement()
     {
         float t = 0f;
 
         while (true)
         {
             t += Time.deltaTime * pulseSpeed;
-            float pulse = 1f + Mathf.Sin(t) * pulseAmount;
+            float pulse = highlightScaleMultiplier + Mathf.Sin(t) * pulseAmount;
 
-            if (activeGlow != null)
-                activeGlow.transform.localScale = activeElementOriginalScale * glowScaleMultiplier * pulse;
+            if (activeElementTransform != null)
+                activeElementTransform.localScale = activeElementOriginalScale * pulse;
 
             yield return null;
         }
@@ -285,12 +266,6 @@ public class HoldingFamiliarizationController : MonoBehaviour
         {
             activeElementTransform.localScale = activeElementOriginalScale;
             activeElementTransform = null;
-        }
-
-        if (activeGlow != null)
-        {
-            Destroy(activeGlow);
-            activeGlow = null;
         }
     }
 

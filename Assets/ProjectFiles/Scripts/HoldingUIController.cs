@@ -12,14 +12,12 @@ public class HoldingUIController : MonoBehaviour
 
     [Header("Familiarization Panel")]
     [SerializeField] private GameObject familiarizationPanel;
-    [SerializeField] private TextMeshProUGUI familiarizationLabelText;
+    [SerializeField] private GameObject mapPanel;
+    [SerializeField] private GameObject hsiPanel;
 
     [Header("Info Panel UI")]
     [SerializeField] private GameObject infoPanel;
     [SerializeField] private TextMeshProUGUI infoText;
-
-    [Tooltip("Every highlightable element on the familiarization page, keyed by the id used in HoldingStepData.highlightElementId.")]
-    [SerializeField] private List<HighlightElement> highlightElements;
 
     [Header("Sector Select Panel")]
     [SerializeField] private GameObject sectorSelectPanel;
@@ -41,16 +39,8 @@ public class HoldingUIController : MonoBehaviour
     [SerializeField] private Button nextButton;
     [SerializeField] private Button previousButton;
 
-
     private bool guidedSequenceDone;
-
-    [System.Serializable]
-    public struct HighlightElement
-    {
-        public string id;
-        public GameObject element;
-    }
-
+    private readonly HashSet<int> completedFamiliarizationSteps = new HashSet<int>();
     private void Awake()
     {
         nextButton.onClick.AddListener(scenarioManager.GoNext);
@@ -102,6 +92,7 @@ public class HoldingUIController : MonoBehaviour
 
     private void HandleStepLoaded(HoldingStepData step, int index)
     {
+        Debug.Log($"HandleStepLoaded: type={step.stepType}");
         if (simulationController != null)
             simulationController.StopEverything();
 
@@ -113,7 +104,7 @@ public class HoldingUIController : MonoBehaviour
         switch (step.stepType)
         {
             case HoldingStepType.Familiarization:
-                ShowFamiliarizationStep(step);
+                ShowFamiliarizationStep(step, index);
                 break;
             case HoldingStepType.SectorSelect:
                 ShowSectorSelectStep(step);
@@ -126,7 +117,7 @@ public class HoldingUIController : MonoBehaviour
                 break;
         }
 
-        // Simulation steps get their info-panel state from the four beats above (via
+        // Simulation steps get their info-panel state from the four beats (via
         // HandleInfoTextChanged). Every other step type uses the plain per-step text/flag.
         if (step.stepType != HoldingStepType.Simulation)
             UpdateInfoPanel(step);
@@ -134,14 +125,21 @@ public class HoldingUIController : MonoBehaviour
         RefreshNavigation();
     }
 
-    private void ShowFamiliarizationStep(HoldingStepData step)
+    private void ShowFamiliarizationStep(HoldingStepData step, int index)
     {
         familiarizationPanel.SetActive(true);
-        guidedSequenceDone = step.highlightSequence == null || step.highlightSequence.Length == 0;
+
+        bool isMap = step.familiarizationPage == FamiliarizationPage.Map;
+        if (mapPanel != null) mapPanel.SetActive(isMap);
+        if (hsiPanel != null) hsiPanel.SetActive(!isMap);
+
+        bool alreadyDone = completedFamiliarizationSteps.Contains(index);
+        guidedSequenceDone = alreadyDone || step.highlightSequence == null || step.highlightSequence.Length == 0;
 
         if (familiarizationController != null && !guidedSequenceDone)
             familiarizationController.BeginSequence(step.highlightSequence);
     }
+
     private void ShowSectorSelectStep(HoldingStepData step)
     {
         sectorSelectPanel.SetActive(true);
@@ -197,6 +195,35 @@ public class HoldingUIController : MonoBehaviour
         Debug.Log("Holding Procedures training complete.");
     }
 
+    private void HandleGuidedSequenceComplete()
+    {
+        guidedSequenceDone = true;
+        completedFamiliarizationSteps.Add(scenarioManager.CurrentIndex);
+        RefreshNavigation();
+    }
+
+    // Called by HoldingSimulationController at each beat (step start, pause, knob, timer, done).
+    // Null means "hide the panel", a non-empty string updates the text and shows the panel
+    // (only if this step actually has Show Info Panel enabled).
+    private void HandleInfoTextChanged(string text)
+    {
+        if (infoPanel == null)
+            return;
+
+        HoldingStepData current = scenarioManager.CurrentStep;
+        bool stepAllowsPanel = current != null && current.showInfoPanel;
+
+        if (string.IsNullOrEmpty(text) || !stepAllowsPanel)
+        {
+            infoPanel.SetActive(false);
+            return;
+        }
+
+        infoPanel.SetActive(true);
+        if (infoText != null)
+            infoText.text = text;
+    }
+
     // ==================================================
     // NAVIGATION
     // ==================================================
@@ -247,33 +274,5 @@ public class HoldingUIController : MonoBehaviour
 
         if (infoPanel != null)
             infoPanel.SetActive(false);
-    }
-
-    // Called by HoldingSimulationController at each beat (step start, pause, knob, timer, done).
-    // Null means "hide the panel", a non-empty string updates the text and shows the panel
-    // (only if this step actually has Show Info Panel enabled).
-    private void HandleInfoTextChanged(string text)
-    {
-        if (infoPanel == null)
-            return;
-
-        HoldingStepData current = scenarioManager.CurrentStep;
-        bool stepAllowsPanel = current != null && current.showInfoPanel;
-
-        if (string.IsNullOrEmpty(text) || !stepAllowsPanel)
-        {
-            infoPanel.SetActive(false);
-            return;
-        }
-
-        infoPanel.SetActive(true);
-        if (infoText != null)
-            infoText.text = text;
-    }
-
-    private void HandleGuidedSequenceComplete()
-    {
-        guidedSequenceDone = true;
-        RefreshNavigation();
     }
 }
